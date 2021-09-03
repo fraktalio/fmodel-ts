@@ -27,11 +27,7 @@ export class _Decider<C, Si, So, Ei, Eo> {
     readonly decide: (c: C, s: Si) => readonly Eo[],
     readonly evolve: (s: Si, e: Ei) => So,
     readonly initialState: So
-  ) {
-    this.decide = decide;
-    this.evolve = evolve;
-    this.initialState = initialState;
-  }
+  ) {}
 
   /**
    * Left map on C/Command parameter - Contravariant
