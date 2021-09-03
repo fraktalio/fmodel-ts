@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import test from 'ava';
 
-import { _View, View } from './view';
+import { View } from './view';
 
 function isNumber(x: any): x is number {
   return typeof x === 'number';

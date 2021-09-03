@@ -3,13 +3,20 @@
 /* eslint-disable functional/no-class */
 
 /**
- * _View is a datatype that represents the event handling algorithm,
+ * `_View` is a datatype that represents the event handling algorithm,
  * responsible for translating the events into denormalized state,
  * which is more adequate for querying.
  *
  * @param Si - input State
  * @param So - output State
  * @param E - Event
+ *
+ * @constructor Creates `_View`
+ *
+ * @property evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @property initialState - A starting point / An initial state of type `So`
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class _View<Si, So, E> {
   readonly evolve: (s: Si, e: E) => So;
@@ -22,8 +29,6 @@ export class _View<Si, So, E> {
 
   /**
    * Left map on E/Event parameter - Contravariant
-   *
-   * @param f
    */
   mapLeftOnEvent<En>(f: (en: En) => E): _View<Si, So, En> {
     return new _View(
@@ -34,9 +39,6 @@ export class _View<Si, So, E> {
 
   /**
    * Dimap on S/State parameter - Contravariant on the Si (input State) - Covariant on the So (output State) = Profunctor
-   *
-   * @param fl
-   * @param fr
    */
   dimapOnState<Sin, Son>(
     fl: (sin: Sin) => Si,
@@ -51,25 +53,22 @@ export class _View<Si, So, E> {
   /**
    * Left map on S/State parameter - Contravariant
    *
-   * @param f
    */
   mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
-    return this.dimapOnState(f, (so) => so);
+    return this.dimapOnState(f, identity);
   }
 
   /**
    * Right map on S/State parameter - Covariant
    *
-   * @param f
    */
   mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
-    return this.dimapOnState((sin) => sin, f);
+    return this.dimapOnState(identity, f);
   }
 
   /**
    * Right apply on S/State parameter - Applicative
    *
-   * @param ff
    */
   applyOnState<Son>(ff: _View<Si, (so: So) => Son, E>): _View<Si, Son, E> {
     return new _View(
@@ -81,7 +80,6 @@ export class _View<Si, So, E> {
   /**
    * Right product on S/State parameter - Applicative
    *
-   * @param fb
    */
   productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
@@ -90,8 +88,6 @@ export class _View<Si, So, E> {
   /**
    * Combines Views into one bigger View
    *
-   * @param y second View
-   * @return new View of type [_View]<[Pair]<[Si], [Si2]>, [Pair]<[So], [So2]>, [E_SUPER]>
    */
   combine<Si2, So2, E2>(
     y: _View<Si2, So2, E2>
@@ -109,11 +105,11 @@ export class _View<Si, So, E> {
 }
 
 /**
- * View is a datatype that represents the event handling algorithm,
+ * `View` is a datatype that represents the event handling algorithm,
  * responsible for translating the events into denormalized state,
  * which is more adequate for querying.
  *
- * This is a specialized version of the _View with `Si=So=S`
+ * This is a specialized version of the `_View` with `Si=So=S`
  *
  * ### Example (es module)
  * ```js
@@ -123,10 +119,17 @@ export class _View<Si, So, E> {
  *  if (isNumber(e)) { return s + e; }
  *  else { return s; }
  * }, 0);
- * // => 8
  * ```
  *
  * @param S - State
  * @param E - Event
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class View<S, E> extends _View<S, S, E> {}
+
+/**
+ * Identity function
+ * @param t
+ */
+const identity = <T>(t: T) => t;
