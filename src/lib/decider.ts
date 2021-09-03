@@ -23,14 +23,10 @@
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class _Decider<C, Si, So, Ei, Eo> {
-  readonly decide: (c: C, s: Si) => readonly Eo[];
-  readonly evolve: (s: Si, e: Ei) => So;
-  readonly initialState: So;
-
   constructor(
-    decide: (c: C, s: Si) => readonly Eo[],
-    evolve: (s: Si, e: Ei) => So,
-    initialState: So
+    readonly decide: (c: C, s: Si) => readonly Eo[],
+    readonly evolve: (s: Si, e: Ei) => So,
+    readonly initialState: So
   ) {
     this.decide = decide;
     this.evolve = evolve;

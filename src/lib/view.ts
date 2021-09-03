@@ -19,13 +19,10 @@
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class _View<Si, So, E> {
-  readonly evolve: (s: Si, e: E) => So;
-  readonly initialState: So;
-
-  constructor(evolve: (s: Si, e: E) => So, initialState: So) {
-    this.evolve = evolve;
-    this.initialState = initialState;
-  }
+  constructor(
+    readonly evolve: (s: Si, e: E) => So,
+    readonly initialState: So
+  ) {}
 
   /**
    * Left map on E/Event parameter - Contravariant

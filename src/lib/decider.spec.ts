@@ -1,7 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+/* eslint-disable functional/no-class */
+
 import test from 'ava';
 
 import { Decider } from './decider';
+
+// ########### Commands ###########
+class AddOddNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+class MultiplyOddNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+class AddEvenNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+class MultiplyEvenNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
+
+type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 
 function isNumber(x: any): x is number {
   return typeof x === 'number';
@@ -11,14 +35,16 @@ function isString(x: any): x is string {
   return typeof x === 'string';
 }
 
-const decider: Decider<number, number, number> = new Decider<
-  number,
+const decider: Decider<OddNumberCmd, number, number> = new Decider<
+  OddNumberCmd,
   number,
   number
 >(
   (c, _) => {
-    if (isNumber(c)) {
-      return [c];
+    if (c instanceof AddOddNumberCmd) {
+      return [c.value];
+    } else if (c instanceof MultiplyOddNumberCmd) {
+      return [c.value];
     } else {
       return [];
     }
@@ -33,21 +59,21 @@ const decider: Decider<number, number, number> = new Decider<
   0
 );
 
-const decider2: Decider<string, string, string> = new Decider<
-  string,
+const decider2: Decider<EvenNumberCmd, string, string> = new Decider<
+  EvenNumberCmd,
   string,
   string
 >(
   (c, _) => {
-    // Do some pattern matching here ;)
-    if (isString(c)) {
-      return [c];
+    if (c instanceof AddEvenNumberCmd) {
+      return [c.value.toString()];
+    } else if (c instanceof MultiplyEvenNumberCmd) {
+      return [c.value.toString()];
     } else {
       return [];
     }
   },
   (s, e) => {
-    // Do some pattern matching here ;)
     if (isString(e)) {
       return s.concat(e);
     } else {
@@ -77,13 +103,16 @@ test('decider-combined-evolve2', (t) => {
 });
 
 test('decider-decide', (t) => {
-  t.deepEqual(decider.decide(1, 1), [1]);
+  t.deepEqual(decider.decide(new AddOddNumberCmd(1), 1), [1]);
 });
 
 test('decider2-decide', (t) => {
-  t.deepEqual(decider2.decide('Yin', 'Yang'), ['Yin']);
+  t.deepEqual(decider2.decide(new AddEvenNumberCmd(2), 'Yang'), ['2']);
 });
 
 test('decider-combined-decide', (t) => {
-  t.deepEqual(decider.combine(decider2).decide('Yang', [0, 'Yin']), ['Yang']);
+  t.deepEqual(
+    decider.combine(decider2).decide(new AddOddNumberCmd(1), [0, 'Yin']),
+    [1]
+  );
 });
