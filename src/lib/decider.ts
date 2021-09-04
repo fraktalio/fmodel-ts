@@ -130,18 +130,18 @@ export class _Decider<C, Si, So, Ei, Eo> {
     Ei | Ei2,
     Eo | Eo2
   > {
-    const deciderX = this.mapLeftOnCommand<C | C2>((c) => c as unknown as C)
+    const deciderX = this.mapLeftOnCommand<C | C2>((c) => c as C)
       .mapLeftOnState<readonly [Si, Si2]>((sin) => sin[0])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
-        (ein) => ein as unknown as Ei,
+        (ein) => ein as Ei,
         (eo) => eo
       );
 
     const deciderY = y
-      .mapLeftOnCommand<C | C2>((c) => c as unknown as C2)
+      .mapLeftOnCommand<C | C2>((c) => c as C2)
       .mapLeftOnState<readonly [Si, Si2]>((sin) => sin[1])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
-        (ein) => ein as unknown as Ei2,
+        (ein) => ein as Ei2,
         (eo2) => eo2
       );
 

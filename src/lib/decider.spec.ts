@@ -16,11 +16,11 @@ class MultiplyOddNumberCmd {
 }
 
 class AddEvenNumberCmd {
-  constructor(readonly value: number) {}
+  constructor(readonly valueOdd: string) {}
 }
 
 class MultiplyEvenNumberCmd {
-  constructor(readonly value: number) {}
+  constructor(readonly valueOdd: string) {}
 }
 
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
@@ -66,9 +66,9 @@ const decider2: Decider<EvenNumberCmd, string, string> = new Decider<
 >(
   (c, _) => {
     if (c instanceof AddEvenNumberCmd) {
-      return [c.value.toString()];
+      return [c.valueOdd];
     } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [c.value.toString()];
+      return [c.valueOdd];
     } else {
       return [];
     }
@@ -106,8 +106,30 @@ test('decider-decide', (t) => {
   t.deepEqual(decider.decide(new AddOddNumberCmd(1), 1), [1]);
 });
 
+test('decider-decide2', (t) => {
+  t.deepEqual(
+    decider
+      .mapLeftOnCommand<OddNumberCmd | EvenNumberCmd>(
+        (cn) => cn as OddNumberCmd
+      )
+      .decide(new AddEvenNumberCmd('test'), 1),
+    []
+  );
+});
+
+test('decider-decide3', (t) => {
+  t.deepEqual(
+    decider
+      .mapLeftOnCommand<OddNumberCmd | EvenNumberCmd>(
+        (cn) => cn as OddNumberCmd
+      )
+      .decide(new AddOddNumberCmd(1), 1),
+    [1]
+  );
+});
+
 test('decider2-decide', (t) => {
-  t.deepEqual(decider2.decide(new AddEvenNumberCmd(2), 'Yang'), ['2']);
+  t.deepEqual(decider2.decide(new AddEvenNumberCmd('2'), 'Yang'), ['2']);
 });
 
 test('decider-combined-decide', (t) => {
