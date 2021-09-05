@@ -1,4 +1,6 @@
-# fmodel-ts
+# **f`(`model`)`** - Functional Domain Modeling with `TypeScript`
+
+[![CI with Node/NPM - Test and Build](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml/badge.svg)](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml)
 
 When you’re developing an information system to automate the activities of the business, you are modeling the business.
 The abstractions that you design, the behaviors that you implement, and the UI interactions that you build all reflect
