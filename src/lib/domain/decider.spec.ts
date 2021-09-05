@@ -16,11 +16,11 @@ class MultiplyOddNumberCmd {
 }
 
 class AddEvenNumberCmd {
-  constructor(readonly valueOdd: string) {}
+  constructor(readonly valueEven: string) {}
 }
 
 class MultiplyEvenNumberCmd {
-  constructor(readonly valueOdd: string) {}
+  constructor(readonly valueEven: string) {}
 }
 
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
@@ -66,9 +66,9 @@ const decider2: Decider<EvenNumberCmd, string, string> = new Decider<
 >(
   (c, _) => {
     if (c instanceof AddEvenNumberCmd) {
-      return [c.valueOdd];
+      return [c.valueEven];
     } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [c.valueOdd];
+      return [c.valueEven];
     } else {
       return [];
     }

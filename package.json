@@ -1,11 +1,11 @@
 {
   "name": "fmodel-ts",
-  "version": "1.0.0",
+  "version": "1.0.0-SNAPSHOT",
   "description": "Functional domain modeling with TypeScript",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
   "module": "build/module/index.js",
-  "repository": "https://github.com/idugalic/fmodel-ts",
+  "repository": "https://github.com/fraktalio/fmodel-ts",
   "license": "Apache License, Version 2.0",
   "keywords": [],
   "scripts": {
