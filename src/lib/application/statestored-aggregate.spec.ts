@@ -19,10 +19,7 @@ import test from 'ava';
 
 import { Decider } from '../domain/decider';
 
-import {
-  EventRepository,
-  EventSourcingAggregate,
-} from './eventsourcing-aggregate';
+import { StateRepository, StateStoredAggregate } from './statestored-aggregate';
 
 // ########### Commands ###########
 class AddOddNumberCmd {
@@ -97,63 +94,56 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
   0
 );
 
-const storage: readonly number[] = [];
-const storage2: readonly number[] = [];
+// eslint-disable-next-line functional/no-let
+let storage: number | null = null;
+// eslint-disable-next-line functional/no-let
+let storage2: number | null = null;
 
-class EventRepositoryImpl implements EventRepository<OddNumberCmd, number> {
-  fetchEvents(_c: OddNumberCmd): readonly number[] {
+class StateRepositoryImpl implements StateRepository<OddNumberCmd, number> {
+  fetchState(_c: OddNumberCmd): number | null {
     return storage;
   }
-
-  save(e: number): number {
-    storage.concat(e);
-    return e;
-  }
-  saveAll(eList: readonly number[]): readonly number[] {
-    storage.concat(eList);
-    return eList;
+  save(s: number): number {
+    storage = s;
+    return s;
   }
 }
 
-class EventRepositoryImpl2 implements EventRepository<EvenNumberCmd, number> {
-  fetchEvents(_c: EvenNumberCmd): readonly number[] {
+class StateRepositoryImpl2 implements StateRepository<EvenNumberCmd, number> {
+  fetchState(_c: EvenNumberCmd): number | null {
     return storage2;
   }
 
-  save(e: number): number {
-    storage2.concat(e);
-    return e;
-  }
-  saveAll(eList: readonly number[]): readonly number[] {
-    storage2.concat(eList);
-    return eList;
+  save(s: number): number {
+    storage2 = s;
+    return s;
   }
 }
 
-const repository: EventRepository<OddNumberCmd, number> =
-  new EventRepositoryImpl();
+const repository: StateRepository<OddNumberCmd, number> =
+  new StateRepositoryImpl();
 
-const repository2: EventRepository<EvenNumberCmd, number> =
-  new EventRepositoryImpl2();
+const repository2: StateRepository<EvenNumberCmd, number> =
+  new StateRepositoryImpl2();
 
-const aggregate: EventSourcingAggregate<OddNumberCmd, number, number> =
-  new EventSourcingAggregate<OddNumberCmd, number, number>(
+const aggregate: StateStoredAggregate<OddNumberCmd, number, number> =
+  new StateStoredAggregate<OddNumberCmd, number, number>(
     decider,
     repository,
     undefined
   );
 
-const aggregate2: EventSourcingAggregate<EvenNumberCmd, number, number> =
-  new EventSourcingAggregate<EvenNumberCmd, number, number>(
+const aggregate2: StateStoredAggregate<EvenNumberCmd, number, number> =
+  new StateStoredAggregate<EvenNumberCmd, number, number>(
     decider2,
     repository2,
     undefined
   );
 
 test('aggregate-handle', (t) => {
-  t.deepEqual(aggregate.handle(new AddOddNumberCmd(1)), [1]);
+  t.deepEqual(aggregate.handle(new AddOddNumberCmd(1)), 1);
 });
 
 test('aggregate-handle2', (t) => {
-  t.deepEqual(aggregate2.handle(new AddEvenNumberCmd(2)), [2]);
+  t.deepEqual(aggregate2.handle(new AddEvenNumberCmd(2)), 2);
 });
