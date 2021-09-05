@@ -93,7 +93,7 @@ export interface EventRepository<C, E> {
    *
    * @return list of Events of type `E`
    */
-  fetchEvents(c: C): readonly E[];
+  readonly fetchEvents: (c: C) => readonly E[];
 
   /**
    * Save event
@@ -101,7 +101,7 @@ export interface EventRepository<C, E> {
    * @param e Event of type `E`
    * @return newly saved Event of type `E`
    */
-  save(e: E): E;
+  readonly save: (e: E) => E;
 
   /**
    * Save events
@@ -109,5 +109,5 @@ export interface EventRepository<C, E> {
    * @param eList list of Events of type `E`
    * @return newly saved list of Events of type `E`
    */
-  saveAll(eList: readonly E[]): readonly E[];
+  readonly saveAll: (eList: readonly E[]) => readonly E[];
 }

@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
 
 /* eslint-disable functional/no-class */
 
@@ -105,7 +105,6 @@ const storage: readonly number[] = [];
 const storage2: readonly number[] = [];
 
 class EventRepositoryImpl implements EventRepository<OddNumberCmd, number> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fetchEvents(_c: OddNumberCmd): readonly number[] {
     return storage;
   }
@@ -121,7 +120,6 @@ class EventRepositoryImpl implements EventRepository<OddNumberCmd, number> {
 }
 
 class EventRepositoryImpl2 implements EventRepository<EvenNumberCmd, number> {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fetchEvents(_c: EvenNumberCmd): readonly number[] {
     return storage2;
   }
