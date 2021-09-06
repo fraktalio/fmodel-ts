@@ -1,4 +1,4 @@
-# **f`(`model`)`** - Functional Domain Modeling with `TypeScript`
+# **f`(`model`)`** - Functional Domain Modeling with TypeScript
 
 [![CI with Node/NPM - Test and Build](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml/badge.svg)](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml)
 
