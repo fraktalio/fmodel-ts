@@ -41,7 +41,7 @@ The new state is always evolved out of the current state `S` and the current eve
 
 `Decider` is the most important datatype, but it is not the only one. There are others:
 
-![onion architecture image](.assets/onion.png)
+![onion architecture image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/onion.png)
 
 ## Decider
 
@@ -75,7 +75,7 @@ export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}
 
 Additionally, `initialState` of the Decider is introduced to gain more control over the initial state of the Decider.
 
-![decider image](.assets/decider.png)
+![decider image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/decider.png)
 
 ## View
 
@@ -107,7 +107,7 @@ export class _View<Si, So, E> {
 export class View<S, E> extends _View<S, S, E> {}
 ```
 
-![view image](.assets/view.png)
+![view image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/view.png)
 
 ## Saga
 
@@ -132,5 +132,5 @@ export class Saga<AR, A> {
 }
 ```
 
-![saga image](.assets/saga.png)
+![saga image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/saga.png)
 
