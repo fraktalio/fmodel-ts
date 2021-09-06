@@ -27,13 +27,14 @@ export class StateStoredAggregate<C, S, E> {
 
   private calculateNewState(state: S, command: C): S {
     const events = this.decider.decide(command, state);
-    const newState = events.reduce(this.decider.evolve, state);
+    // eslint-disable-next-line functional/no-let
+    let newState = events.reduce(this.decider.evolve, state);
 
     if (typeof this.saga !== 'undefined') {
       const saga = this.saga;
       events
         .flatMap((it) => saga.react(it))
-        .forEach((c) => this.calculateNewState(newState, c));
+        .forEach((c) => (newState = this.calculateNewState(newState, c)));
     }
     return newState;
   }
