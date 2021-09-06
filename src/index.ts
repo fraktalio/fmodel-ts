@@ -16,5 +16,5 @@ export * from './lib/domain/decider';
 export * from './lib/domain/saga';
 export * from './lib/application/eventsourcing-aggregate';
 export * from './lib/application/statestored-aggregate';
-export * from './lib/application/materialize-view';
+export * from './lib/application/materialized-view';
 export * from './lib/application/saga-manager';

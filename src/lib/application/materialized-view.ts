@@ -29,7 +29,7 @@ import { View } from '../domain/view';
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class MaterializeView<S, E> {
+export class MaterializedView<S, E> {
   constructor(
     private readonly view: View<S, E>,
     private readonly viewStateRepository: ViewStateRepository<E, S>
