@@ -19,18 +19,35 @@
  * `Saga` is a datatype that represents the central point of control deciding what to execute next `A`.
  * It is responsible for mapping different events from aggregates into action results `AR` that the `Saga` then can use to calculate the next actions `A` to be mapped to command of other aggregates.
  *
- * @param AR - Action Result type
- * @param A - Action type
- * @property react - A function/lambda that takes input state of type `AR`, and returns the list of actions `A[]`>.
- * @constructor Creates `Saga`
+ * @typeParam AR - Action Result type
+ * @typeParam A - Action type
  *
+ * @example
+ * ```typescript
+ * const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<OddNumberEvt, EvenNumberCmd>(
+ * (ar) => {
+ *   if (ar instanceof OddNumberAddedEvt) {
+ *      return [new AddEvenNumberCmd(ar.value + 1)];
+ *    } else if (ar instanceof OddNumberMultipliedEvt) {
+ *      return [new MultiplyEvenNumberCmd(ar.value + 1)];
+ *    } else {
+ *      return [];
+ *    }
+ * });
+ * ```
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class Saga<AR, A> {
+  /**
+   * @constructor Creates `Saga`
+   * @param react - A function/lambda that takes input state of type `AR`, and returns the list of actions `A[]`>.
+   */
   constructor(readonly react: (ar: AR) => readonly A[]) {}
 
   /**
    * Left map on `AR`/ActionResult parameter - Contravariant
+   *
+   * @typeParam ARn - New Action Result
    */
   mapLeftOnActionResult<ARn>(f: (arn: ARn) => AR): Saga<ARn, A> {
     return new Saga((arn: ARn) => this.react(f(arn)));
@@ -38,11 +55,18 @@ export class Saga<AR, A> {
 
   /**
    * Right map on `A`/Action parameter - Covariant
+   *
+   * @typeParam An - New Action
    */
   mapOnAction<An>(f: (a: A) => An): Saga<AR, An> {
     return new Saga((ar: AR) => this.react(ar).map(f));
   }
 
+  /**
+   * Combines two choreography sagas into one orchestrating Saga
+   *
+   * @param y - second Saga
+   */
   combine<AR2, A2>(y: Saga<AR2, A2>): Saga<AR | AR2, A | A2> {
     const sagaX = this.mapLeftOnActionResult<AR | AR2>(
       (en) => en as AR
@@ -58,4 +82,9 @@ export class Saga<AR, A> {
   }
 }
 
+/**
+ * Identity function
+ *
+ * @param t - some type
+ */
 const identity = <T>(t: T) => t;

@@ -11,47 +11,84 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable functional/no-class */
 import test from 'ava';
 
 import { View } from './view';
 
-function isNumber(x: any): x is number {
-  return typeof x === 'number';
+// ### Events
+class OddNumberAddedEvt {
+  constructor(readonly value: number) {}
 }
 
-function isString(x: any): x is string {
-  return typeof x === 'string';
+class OddNumberMultiplied {
+  constructor(readonly value: number) {}
 }
 
-const view: View<number, number> = new View<number, number>((s, e) => {
-  if (isNumber(e)) {
-    return s + e;
-  } else {
-    return s;
-  }
-}, 0);
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultiplied;
 
-const view2: View<string, string> = new View<string, string>((s, e) => {
-  if (isString(e)) {
-    return s.concat(e);
-  } else {
-    return s;
-  }
-}, '');
+class EvenNumberAddedEvt {
+  constructor(readonly value: number) {}
+}
+
+class EvenNumberMultiplied {
+  constructor(readonly value: number) {}
+}
+
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultiplied;
+
+const view: View<number, OddNumberEvt> = new View<number, OddNumberEvt>(
+  (s, e) => {
+    if (e instanceof OddNumberAddedEvt) {
+      return s + e.value;
+    } else if (e instanceof OddNumberMultiplied) {
+      return s * e.value;
+    } else {
+      return s;
+    }
+  },
+  0
+);
+
+const view2: View<number, EvenNumberEvt> = new View<number, EvenNumberEvt>(
+  (s, e) => {
+    if (e instanceof EvenNumberAddedEvt) {
+      return s + e.value;
+    } else if (e instanceof EvenNumberMultiplied) {
+      return s * e.value;
+    } else {
+      return s;
+    }
+  },
+  0
+);
 
 test('view-evolve', (t) => {
-  t.is(view.evolve(1, 1), 2);
+  t.is(view.evolve(1, new OddNumberAddedEvt(1)), 2);
+});
+
+test('view-evolve2', (t) => {
+  t.is(view.evolve(2, new OddNumberMultiplied(5)), 10);
 });
 
 test('view2-evolve', (t) => {
-  t.is(view2.evolve('Yin', 'Yang'), 'YinYang');
+  t.is(view2.evolve(1, new EvenNumberAddedEvt(2)), 3);
+});
+
+test('view2-evolve2', (t) => {
+  t.is(view2.evolve(2, new EvenNumberMultiplied(6)), 12);
 });
 
 test('view-combined-evolve', (t) => {
-  t.deepEqual(view.combine(view2).evolve([0, 'Yin'], 'Yang'), [0, 'YinYang']);
+  t.deepEqual(
+    view.combine(view2).evolve([0, 0], new OddNumberAddedEvt(1)),
+    [1, 0]
+  );
 });
 
 test('view-combined-evolve2', (t) => {
-  t.deepEqual(view.combine(view2).evolve([0, 'Yin'], 1), [1, 'Yin']);
+  t.deepEqual(
+    view.combine(view2).evolve([0, 0], new EvenNumberAddedEvt(2)),
+    [0, 2]
+  );
 });

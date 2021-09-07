@@ -20,18 +20,21 @@
  * responsible for translating the events into denormalized state,
  * which is more adequate for querying.
  *
- * @param Si - input State
- * @param So - output State
- * @param E - Event
+ * @typeParam Si - input State
+ * @typeParam So - output State
+ * @typeParam E - Event
  *
- * @constructor Creates `_View`
- *
- * @property evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @property initialState - A starting point / An initial state of type `So`
+ * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @param initialState - A starting point / An initial state of type `So`
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class _View<Si, So, E> {
+  /**
+   * @constructor - creates the `_View`
+   * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+   * @param initialState - A starting point / An initial state of type `So`
+   */
   constructor(
     readonly evolve: (s: Si, e: E) => So,
     readonly initialState: So
@@ -39,6 +42,8 @@ export class _View<Si, So, E> {
 
   /**
    * Left map on E/Event parameter - Contravariant
+   *
+   * @typeParam En - New Event
    */
   mapLeftOnEvent<En>(f: (en: En) => E): _View<Si, So, En> {
     return new _View(
@@ -49,6 +54,9 @@ export class _View<Si, So, E> {
 
   /**
    * Dimap on S/State parameter - Contravariant on the Si (input State) - Covariant on the So (output State) = Profunctor
+   *
+   * @typeParam Sin - New input State
+   * @typeParam Son - New output State
    */
   dimapOnState<Sin, Son>(
     fl: (sin: Sin) => Si,
@@ -63,6 +71,7 @@ export class _View<Si, So, E> {
   /**
    * Left map on S/State parameter - Contravariant
    *
+   * @typeParam Sin - New input State
    */
   mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
     return this.dimapOnState(f, identity);
@@ -71,6 +80,7 @@ export class _View<Si, So, E> {
   /**
    * Right map on S/State parameter - Covariant
    *
+   * @typeParam Son - New output State
    */
   mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
     return this.dimapOnState(identity, f);
@@ -79,6 +89,7 @@ export class _View<Si, So, E> {
   /**
    * Right apply on S/State parameter - Applicative
    *
+   * @typeParam Son - New output State
    */
   applyOnState<Son>(ff: _View<Si, (so: So) => Son, E>): _View<Si, Son, E> {
     return new _View(
@@ -90,6 +101,7 @@ export class _View<Si, So, E> {
   /**
    * Right product on S/State parameter - Applicative
    *
+   * @typeParam Son - New output State
    */
   productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
@@ -121,18 +133,24 @@ export class _View<Si, So, E> {
  *
  * This is a specialized version of the `_View` with `Si=So=S`
  *
- * ### Example (es module)
- * ```js
- * import { View } from 'fmodel-ts'
- * const view: View<number, number> = new View<number, number>((s, e) => {
- *  // pattern matching
- *  if (isNumber(e)) { return s + e; }
- *  else { return s; }
- * }, 0);
+ * ### Example
+ * ```typescript
+ * const view: View<number, OddNumberEvt> = new View<number, OddNumberEvt>(
+ * (s, e) => {
+ *    if (e instanceof OddNumberAddedEvt) {
+ *      return s + e.value;
+ *    } else if (e instanceof OddNumberMultiplied) {
+ *      return s * e.value;
+ *    } else {
+ *      return s;
+ *    }
+ *  },
+ * 0
+ * );
  * ```
  *
- * @param S - State
- * @param E - Event
+ * @typeParam S - State
+ * @typeParam E - Event
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -140,6 +158,5 @@ export class View<S, E> extends _View<S, S, E> {}
 
 /**
  * Identity function
- * @param t
  */
 const identity = <T>(t: T) => t;

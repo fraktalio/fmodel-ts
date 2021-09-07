@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any,@typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 
 /* eslint-disable functional/no-class */
 
@@ -29,42 +29,57 @@ class MultiplyOddNumberCmd {
 }
 
 class AddEvenNumberCmd {
-  constructor(readonly valueEven: string) {}
+  constructor(readonly value: number) {}
 }
 
 class MultiplyEvenNumberCmd {
-  constructor(readonly valueEven: string) {}
+  constructor(readonly value: number) {}
 }
 
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
 
 type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 
-function isNumber(x: any): x is number {
-  return typeof x === 'number';
+// ### Events
+class OddNumberAddedEvt {
+  constructor(readonly value: number) {}
 }
 
-function isString(x: any): x is string {
-  return typeof x === 'string';
+class OddNumberMultiplied {
+  constructor(readonly value: number) {}
 }
 
-const decider: Decider<OddNumberCmd, number, number> = new Decider<
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultiplied;
+
+class EvenNumberAddedEvt {
+  constructor(readonly value: number) {}
+}
+
+class EvenNumberMultiplied {
+  constructor(readonly value: number) {}
+}
+
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultiplied;
+
+const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
   OddNumberCmd,
   number,
-  number
+  OddNumberEvt
 >(
   (c, _) => {
     if (c instanceof AddOddNumberCmd) {
-      return [c.value];
+      return [new OddNumberAddedEvt(c.value)];
     } else if (c instanceof MultiplyOddNumberCmd) {
-      return [c.value];
+      return [new OddNumberMultiplied(c.value)];
     } else {
       return [];
     }
   },
   (s, e) => {
-    if (isNumber(e)) {
-      return s + e;
+    if (e instanceof OddNumberAddedEvt) {
+      return s + e.value;
+    } else if (e instanceof OddNumberMultiplied) {
+      return s * e.value;
     } else {
       return s;
     }
@@ -72,51 +87,65 @@ const decider: Decider<OddNumberCmd, number, number> = new Decider<
   0
 );
 
-const decider2: Decider<EvenNumberCmd, string, string> = new Decider<
+const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
   EvenNumberCmd,
-  string,
-  string
+  number,
+  EvenNumberEvt
 >(
   (c, _) => {
     if (c instanceof AddEvenNumberCmd) {
-      return [c.valueEven];
+      return [new EvenNumberAddedEvt(c.value)];
     } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [c.valueEven];
+      return [new EvenNumberMultiplied(c.value)];
     } else {
       return [];
     }
   },
   (s, e) => {
-    if (isString(e)) {
-      return s.concat(e);
+    if (e instanceof EvenNumberAddedEvt) {
+      return s + e.value;
+    } else if (e instanceof EvenNumberMultiplied) {
+      return s * e.value;
     } else {
       return s;
     }
   },
-  '0'
+  0
 );
 
 test('decider-evolve', (t) => {
-  t.is(decider.evolve(1, 1), 2);
+  t.is(decider.evolve(1, new OddNumberAddedEvt(1)), 2);
 });
 
 test('decider2-evolve', (t) => {
-  t.is(decider2.evolve('Yin', 'Yang'), 'YinYang');
+  t.is(decider2.evolve(1, new EvenNumberAddedEvt(2)), 3);
 });
 
 test('decider-combined-evolve', (t) => {
-  t.deepEqual(decider.combine(decider2).evolve([0, 'Yin'], 'Yang'), [
-    0,
-    'YinYang',
-  ]);
+  t.deepEqual(
+    decider.combine(decider2).evolve([0, 0], new EvenNumberAddedEvt(2)),
+    [0, 2]
+  );
 });
 
 test('decider-combined-evolve2', (t) => {
-  t.deepEqual(decider.combine(decider2).evolve([0, 'Yin'], 1), [1, 'Yin']);
+  t.deepEqual(
+    decider.combine(decider2).evolve([0, 0], new OddNumberAddedEvt(3)),
+    [3, 0]
+  );
+});
+
+test('decider-combined-evolve3', (t) => {
+  t.deepEqual(
+    decider.combine(decider2).evolve([2, 1], new OddNumberMultiplied(3)),
+    [6, 1]
+  );
 });
 
 test('decider-decide', (t) => {
-  t.deepEqual(decider.decide(new AddOddNumberCmd(1), 1), [1]);
+  t.deepEqual(decider.decide(new AddOddNumberCmd(1), 1), [
+    new OddNumberAddedEvt(1),
+  ]);
 });
 
 test('decider-decide2', (t) => {
@@ -125,7 +154,7 @@ test('decider-decide2', (t) => {
       .mapLeftOnCommand<OddNumberCmd | EvenNumberCmd>(
         (cn) => cn as OddNumberCmd
       )
-      .decide(new AddEvenNumberCmd('test'), 1),
+      .decide(new AddEvenNumberCmd(2), 1),
     []
   );
 });
@@ -137,17 +166,33 @@ test('decider-decide3', (t) => {
         (cn) => cn as OddNumberCmd
       )
       .decide(new AddOddNumberCmd(1), 1),
-    [1]
+    [new OddNumberAddedEvt(1)]
   );
 });
 
 test('decider2-decide', (t) => {
-  t.deepEqual(decider2.decide(new AddEvenNumberCmd('2'), 'Yang'), ['2']);
+  t.deepEqual(decider2.decide(new AddEvenNumberCmd(2), 0), [
+    new EvenNumberAddedEvt(2),
+  ]);
 });
 
 test('decider-combined-decide', (t) => {
   t.deepEqual(
-    decider.combine(decider2).decide(new AddOddNumberCmd(1), [0, 'Yin']),
-    [1]
+    decider.combine(decider2).decide(new AddOddNumberCmd(1), [0, 0]),
+    [new OddNumberAddedEvt(1)]
+  );
+});
+
+test('decider-combined-decide2', (t) => {
+  t.deepEqual(
+    decider.combine(decider2).decide(new MultiplyOddNumberCmd(1), [0, 0]),
+    [new OddNumberMultiplied(1)]
+  );
+});
+
+test('decider-combined-decide3', (t) => {
+  t.deepEqual(
+    decider.combine(decider2).decide(new AddEvenNumberCmd(2), [0, 0]),
+    [new EvenNumberAddedEvt(2)]
   );
 });

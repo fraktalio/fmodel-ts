@@ -23,19 +23,20 @@
  *
  * `_Decider` is a pure domain component.
  *
- * @param C Command type
- * @param Si Input_State type
- * @param So Output_State type
- * @param Ei Input_Event type
- * @param Eo Output_Event type
- * @property decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
- * @property evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @property initialState - A starting point / An initial state of type `So`
- * @constructor Creates `_Decider`
+ * @typeParam Si - Input_State type
+ * @typeParam So - Output_State type
+ * @typeParam Ei - Input_Event type
+ * @typeParam Eo - Output_Event type
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class _Decider<C, Si, So, Ei, Eo> {
+  /**
+   * @constructor Creates the `_Decider`
+   * @param decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
+   * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+   * @param initialState - A starting point / An initial state of type `So`
+   */
   constructor(
     readonly decide: (c: C, s: Si) => readonly Eo[],
     readonly evolve: (s: Si, e: Ei) => So,
@@ -44,6 +45,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Left map on C/Command parameter - Contravariant
+   *
+   * @typeParam Cn - New Command
    */
   mapLeftOnCommand<Cn>(f: (cn: Cn) => C): _Decider<Cn, Si, So, Ei, Eo> {
     return new _Decider(
@@ -55,6 +58,9 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Dimap on E/Event parameter - Contravariant on input event and Covariant on output event = Profunctor
+   *
+   * @typeParam Ein - New input Event
+   * @typeParam Eon - New output Event
    */
   dimapOnEvent<Ein, Eon>(
     fl: (ein: Ein) => Ei,
@@ -69,6 +75,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Left map on E/Event parameter - Contravariant
+   *
+   * @typeParam Ein - New input Event
    */
   mapLeftOnEvent<Ein>(f: (ein: Ein) => Ei): _Decider<C, Si, So, Ein, Eo> {
     return this.dimapOnEvent(f, identity);
@@ -76,6 +84,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Right map on E/Event parameter - Covariant
+   *
+   * @typeParam Eon - New output Event
    */
   mapOnEvent<Eon>(f: (ein: Eo) => Eon): _Decider<C, Si, So, Ei, Eon> {
     return this.dimapOnEvent(identity, f);
@@ -83,6 +93,9 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Dimap on S/State parameter - Contravariant on input state (Si) and Covariant on output state (So) = Profunctor
+   *
+   * @typeParam Sin - New input State
+   * @typeParam Son - New output State
    */
   dimapOnState<Sin, Son>(
     fl: (sin: Sin) => Si,
@@ -97,6 +110,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Left map on S/State parameter - Contravariant
+   *
+   * @typeParam Sin - New input State
    */
   mapLeftOnState<Sin>(f: (sin: Sin) => Si): _Decider<C, Sin, So, Ei, Eo> {
     return this.dimapOnState(f, identity);
@@ -104,6 +119,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Right map on S/State parameter - Covariant
+   *
+   * @typeParam Son - New output State
    */
   mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
     return this.dimapOnState(identity, f);
@@ -111,6 +128,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Right apply on S/State parameter - Applicative
+   *
+   * @typeParam Son - New output State
    */
   applyOnState<Son>(
     ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>
@@ -124,6 +143,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Right product on S/State parameter - Applicative
+   *
+   * @typeParam Son - New output State
    */
   productOnState<Son>(
     fb: _Decider<C, Si, Son, Ei, Eo>
@@ -170,15 +191,39 @@ export class _Decider<C, Si, So, Ei, Eo> {
  *
  * `Decider` is a pure domain component.
  *
- * @param C Command type
- * @param S State type
- * @param E Event type
- * @property decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
- * @property evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @property initialState - A starting point / An initial state of type `So`
- * @constructor Creates `Decider`
+ * @typeParam C - comment for type `T`
+ * @typeParam S - State type
+ * @typeParam E - Event type
+ * @param decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
+ * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @param initialState - A starting point / An initial state of type `So`
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ *
+ * @example
+ * ```typescript
+ * const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<OddNumberCmd, number, OddNumberEvt>(
+ * (c, _) => {
+ *   if (c instanceof AddOddNumberCmd) {
+ *      return [new OddNumberAddedEvt(c.value)];
+ *    } else if (c instanceof MultiplyOddNumberCmd) {
+ *      return [new OddNumberMultiplied(c.value)];
+ *    } else {
+ *      return [];
+ *    }
+ *  },
+ * (s, e) => {
+ *    if (e instanceof OddNumberAddedEvt) {
+ *      return s + e.value;
+ *    } else if (e instanceof OddNumberMultiplied) {
+ *      return s * e.value;
+ *    } else {
+ *      return s;
+ *    }
+ *  },
+ * 0
+ * );
+ * ```
  */
 export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}
 

@@ -11,47 +11,83 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable functional/no-class,@typescript-eslint/no-unused-vars */
 import test from 'ava';
 
 import { Saga } from './saga';
 
-function isNumber(x: any): x is number {
-  return typeof x === 'number';
+// ########### Commands ###########
+class AddOddNumberCmd {
+  constructor(readonly value: number) {}
 }
 
-function isString(x: any): x is string {
-  return typeof x === 'string';
+class MultiplyOddNumberCmd {
+  constructor(readonly value: number) {}
 }
 
-const saga: Saga<number, number> = new Saga<number, number>((ar) => {
-  if (isNumber(ar)) {
-    return [ar];
+class AddEvenNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+class MultiplyEvenNumberCmd {
+  constructor(readonly value: number) {}
+}
+
+type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
+
+type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
+
+// ### Events
+class OddNumberAddedEvt {
+  constructor(readonly value: number) {}
+}
+
+class OddNumberMultipliedEvt {
+  constructor(readonly value: number) {}
+}
+
+class EvenNumberAddedEvt {
+  constructor(readonly value: number) {}
+}
+
+class EvenNumberMultipliedEvt {
+  constructor(readonly value: number) {}
+}
+
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
+
+const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
+  OddNumberEvt,
+  EvenNumberCmd
+>((ar) => {
+  if (ar instanceof OddNumberAddedEvt) {
+    return [new AddEvenNumberCmd(ar.value + 1)];
+  } else if (ar instanceof OddNumberMultipliedEvt) {
+    return [new MultiplyEvenNumberCmd(ar.value + 1)];
   } else {
     return [];
   }
 });
 
-const saga2: Saga<string, string> = new Saga<string, string>((ar) => {
-  if (isString(ar)) {
-    return [ar];
-  } else {
-    return [];
-  }
+const saga2: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
+  EvenNumberEvt,
+  OddNumberCmd
+>((_) => {
+  //This Saga is not doing much ;)
+  return [];
 });
 
 test('saga-react', (t) => {
-  t.deepEqual(saga.react(1), [1]);
+  t.deepEqual(saga.react(new OddNumberAddedEvt(2)), [new AddEvenNumberCmd(3)]);
 });
 
 test('saga2-react', (t) => {
-  t.deepEqual(saga2.react('Yin'), ['Yin']);
+  t.deepEqual(saga2.react(new EvenNumberAddedEvt(1)), []);
 });
 
 test('saga-combined-react', (t) => {
-  t.deepEqual(saga.combine(saga2).react('Yang'), ['Yang']);
-});
-
-test('saga-combined-react2', (t) => {
-  t.deepEqual(saga.combine(saga2).react(0), [0]);
+  t.deepEqual(saga.combine(saga2).react(new OddNumberMultipliedEvt(2)), [
+    new MultiplyEvenNumberCmd(3),
+  ]);
 });
