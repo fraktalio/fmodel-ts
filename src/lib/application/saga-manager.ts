@@ -18,13 +18,21 @@
 import { Saga } from '../domain/saga';
 
 /**
- * Saga manager - Stateless process orchestrator
+ * Saga manager - Stateless process orchestrator.
  *
- * It is reacting on Action Results of type `AR` and produces new actions `A` based on them
+ * It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
+ *
+ * @typeParam AR - Action Result of type `AR`
+ * @typeParam A - Action of type `A` that are going to be published downstream
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class SagaManager<AR, A> {
+  /**
+   *
+   * @param saga  - A saga component of type `Saga`<`AR`, `A`>
+   * @param actionPublisher - Interface for `A`ction publishing of type `ActionPublisher`<`A`>
+   */
   constructor(
     private readonly saga: Saga<AR, A>,
     private readonly actionPublisher: ActionPublisher<A>
@@ -33,7 +41,7 @@ export class SagaManager<AR, A> {
   /**
    * Handles the action result of type `AR`
    *
-   * @param actionResult Action Result represent the outcome of some action you want to handle in some way
+   * @param actionResult - Action Result represent the outcome of some action you want to handle in some way
    * @return list of Actions of type `A`
    */
   handle(actionResult: AR): readonly A[] {
@@ -44,9 +52,9 @@ export class SagaManager<AR, A> {
 /**
  * Action publisher interface
  *
- * Used by `SagaManager`
+ * Used by [[SagaManager]]
  *
- * @param A Action
+ * @param A - Action
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -54,7 +62,7 @@ export interface ActionPublisher<A> {
   /**
    * Publish action
    *
-   * @param a Action of type `A`
+   * @param a - Action of type `A`
    * @return newly published Action of type `A`
    */
   readonly publish: (a: A) => A;
@@ -62,7 +70,7 @@ export interface ActionPublisher<A> {
   /**
    * Publish actions
    *
-   * @param aList of Actions of type `A`
+   * @param aList - of Actions of type `A`
    * @return list of newly published Actions of type `A`
    */
   readonly publishAll: (aList: readonly A[]) => readonly A[];

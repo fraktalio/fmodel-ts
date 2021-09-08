@@ -21,22 +21,24 @@ import { View } from '../domain/view';
  * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
- * @param S Materialized View state of type `S`
- * @param E Events of type `E` that are handled by this Materialized View
- * @property view A view component of type `View`<`S`, `E`>
- * @property viewStateRepository Interface for `S`tate management/persistence
- * @constructor Creates `MaterializedView`
+ * @typeParam S - Materialized View state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class MaterializedView<S, E> {
+  /**
+   * @constructor Creates `MaterializedView`
+   * @param view - A view component of type `View`<`S`, `E`>
+   * @param viewStateRepository - Interface for `S`tate management/persistence
+   */
   constructor(
     private readonly view: View<S, E>,
     private readonly viewStateRepository: ViewStateRepository<E, S>
   ) {}
 
   /**
-   * Handles the event of type `E`
+   * Handles the event of type `E`, and returns new persisted state of type `S`
    *
    * @param event Event of type `E` to be handled
    * @return State of type `S`
@@ -54,10 +56,10 @@ export class MaterializedView<S, E> {
 /**
  * View State repository interface
  *
- * Used by `MaterializedView`
+ * Used by [[MaterializedView]]
  *
- * @param E Event
- * @param S State
+ * @param E - Event
+ * @param S - State
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -65,7 +67,7 @@ export interface ViewStateRepository<E, S> {
   /**
    * Fetch state
    *
-   * @param e Event of type `E`
+   * @param e - Event of type `E`
    *
    * @return current state of type `S`
    */
@@ -74,7 +76,7 @@ export interface ViewStateRepository<E, S> {
   /**
    * Save state
    *
-   * @param s State of type `S`
+   * @param s - State of type `S`
    * @return newly saved State of type `S`
    */
   readonly save: (s: S) => S;

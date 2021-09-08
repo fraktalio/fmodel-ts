@@ -26,17 +26,20 @@ import { Saga } from '../domain/saga';
  *
  * Produced events are then stored via `EventRepository.save` function.
  *
- * @param C Commands of type `C` that this aggregate can handle
- * @param S Aggregate state of type `S`
- * @param E Events of type `E` that this aggregate can publish
- * @property decider - A decider component of type `Decider`<`C`, `S`, `E`>.
- * @property eventRepository - Interface for `E`vent management/persistence
- * @property saga - An optional saga component of type `Saga`<`E`, `C`>
- * @constructor Creates `EventSourcingAggregate`
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class EventSourcingAggregate<C, S, E> {
+  /**
+   * @constructor Creates `EventSourcingAggregate`
+   *
+   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param eventRepository - Interface for `E`vent management/persistence
+   * @param saga - An optional saga component of type `Saga`<`E`, `C`>
+   */
   constructor(
     private readonly decider: Decider<C, S, E>,
     private readonly eventRepository: EventRepository<C, E>,
@@ -64,7 +67,12 @@ export class EventSourcingAggregate<C, S, E> {
     }
     return resultingEvents;
   }
-
+  /**
+   * Handles the command of type `C`, and returns new persisted events.
+   *
+   * @param command - Command of type `C`
+   * @return list of persisted events ot type `E`
+   */
   handle(command: C): readonly E[] {
     return this.eventRepository.saveAll(
       this.calculateNewEvents(
@@ -78,10 +86,10 @@ export class EventSourcingAggregate<C, S, E> {
 /**
  * Event repository interface
  *
- * Used by `EventSourcingAggregate`
+ * Used by [[EventSourcingAggregate]]
  *
- * @param C Command
- * @param E Event
+ * @param C - Command
+ * @param E - Event
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -89,7 +97,7 @@ export interface EventRepository<C, E> {
   /**
    * Fetch events
    *
-   * @param c Command of type `C`
+   * @param c - Command of type `C`
    *
    * @return list of Events of type `E`
    */
@@ -98,7 +106,7 @@ export interface EventRepository<C, E> {
   /**
    * Save event
    *
-   * @param e Event of type `E`
+   * @param e - Event of type `E`
    * @return newly saved Event of type `E`
    */
   readonly save: (e: E) => E;
@@ -106,7 +114,7 @@ export interface EventRepository<C, E> {
   /**
    * Save events
    *
-   * @param eList list of Events of type `E`
+   * @param eList - list of Events of type `E`
    * @return newly saved list of Events of type `E`
    */
   readonly saveAll: (eList: readonly E[]) => readonly E[];

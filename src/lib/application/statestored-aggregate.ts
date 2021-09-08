@@ -18,13 +18,31 @@
 import { Decider } from '../domain/decider';
 import { Saga } from '../domain/saga';
 
+/**
+ * State stored aggregate is using/delegating a `StateStoredAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `StateStoredAggregate.decider` which can produce new state as a result.
+ * If the `StateStoredAggregate.decider` is combined out of many deciders via `combine` function, an optional `StateStoredAggregate.saga` could be used to react on new events and send new commands to the `StateStoredAggregate.decider` recursively, in one transaction.
+ *
+ * New state is then stored via `StateRepository.save` suspending function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
 export class StateStoredAggregate<C, S, E> {
+  /**
+   * @constructor Creates `StateStoredAggregate`
+   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param stateRepository  - Interface for `S`tate management/persistence
+   * @param saga - An optional saga component of type `Saga`<`E`, `C`>
+   */
   constructor(
     private readonly decider: Decider<C, S, E>,
     private readonly stateRepository: StateRepository<C, S>,
     private readonly saga?: Saga<E, C>
   ) {}
-
   private calculateNewState(state: S, command: C): S {
     const events = this.decider.decide(command, state);
     // eslint-disable-next-line functional/no-let
@@ -39,6 +57,12 @@ export class StateStoredAggregate<C, S, E> {
     return newState;
   }
 
+  /**
+   * Handles the command of type `C`, and returns new persisted state.
+   *
+   * @param command - Command of type `C` to be handled
+   * @return state of type `S`
+   */
   handle(command: C): S {
     const currentState = this.stateRepository.fetchState(command);
     return this.stateRepository.save(
@@ -53,10 +77,10 @@ export class StateStoredAggregate<C, S, E> {
 /**
  * State repository interface
  *
- * Used by `StateStoredAggregate`
+ * Used by [[StateStoredAggregate]]
  *
- * @param C Command
- * @param S State
+ * @param C - Command
+ * @param S - State
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -64,7 +88,7 @@ export interface StateRepository<C, S> {
   /**
    * Fetch state
    *
-   * @param c Command of type `C`
+   * @param c - Command of type `C`
    *
    * @return current state of type `S`
    */
@@ -73,7 +97,7 @@ export interface StateRepository<C, S> {
   /**
    * Save state
    *
-   * @param s State of type `S`
+   * @param s - State of type `S`
    * @return newly saved State of type `S`
    */
   readonly save: (s: S) => S;
