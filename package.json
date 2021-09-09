@@ -1,6 +1,6 @@
 {
-  "name": "fmodel-ts",
-  "version": "1.0.0-SNAPSHOT",
+  "name": "@fraktalio/fmodel-ts",
+  "version": "1.0.0",
   "description": "Functional domain modeling with TypeScript",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
