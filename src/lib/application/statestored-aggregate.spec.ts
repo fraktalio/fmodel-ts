@@ -22,7 +22,10 @@ import { Saga } from '../domain/saga';
 
 import { StateRepository, StateStoredAggregate } from './statestored-aggregate';
 
-// ########### Commands ###########
+// ################################
+// ###### Domain - Commands #######
+// ################################
+
 class AddOddNumberCmd {
   constructor(readonly value: number) {}
 }
@@ -46,6 +49,10 @@ type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 function isNumber(x: any): x is number {
   return typeof x === 'number';
 }
+
+// ################################
+// ###### Domain - Deciders #######
+// ################################
 
 const decider: Decider<OddNumberCmd, number, number> = new Decider<
   OddNumberCmd,
@@ -98,6 +105,31 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
   },
   0
 );
+
+// ################################
+// ####### Domain - Sagas #########
+// ################################
+
+const saga: Saga<number, EvenNumberCmd | OddNumberCmd> = new Saga<
+  number,
+  EvenNumberCmd | OddNumberCmd
+>((ar) => {
+  if (isNumber(ar)) {
+    if (ar === 6) {
+      return [new AddOddNumberCmd(5)];
+    } else if (ar === 7) {
+      return [new AddEvenNumberCmd(6)];
+    } else {
+      return [];
+    }
+  } else {
+    return [];
+  }
+});
+
+// ################################
+// ###### Application - Repo ######
+// ################################
 
 // eslint-disable-next-line functional/no-let
 let storage: number | null = null;
@@ -155,6 +187,10 @@ const repository3: StateRepository<
   readonly [number, number]
 > = new StateRepositoryImpl3();
 
+// ################################
+// #### Application - Aggregate ###
+// ################################
+
 const aggregate: StateStoredAggregate<OddNumberCmd, number, number> =
   new StateStoredAggregate<OddNumberCmd, number, number>(
     decider,
@@ -168,23 +204,6 @@ const aggregate2: StateStoredAggregate<EvenNumberCmd, number, number> =
     repository2,
     undefined
   );
-
-const saga: Saga<number, EvenNumberCmd | OddNumberCmd> = new Saga<
-  number,
-  EvenNumberCmd | OddNumberCmd
->((ar) => {
-  if (isNumber(ar)) {
-    if (ar === 6) {
-      return [new AddOddNumberCmd(5)];
-    } else if (ar === 7) {
-      return [new AddEvenNumberCmd(6)];
-    } else {
-      return [];
-    }
-  } else {
-    return [];
-  }
-});
 
 const aggregate3: StateStoredAggregate<
   EvenNumberCmd | OddNumberCmd,
