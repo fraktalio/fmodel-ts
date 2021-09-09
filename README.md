@@ -77,6 +77,26 @@ Additionally, `initialState` of the Decider is introduced to gain more control o
 
 ![decider image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/decider.png)
 
+We can now construct event-sourcing or/and state-storing aggregate by using the same `decider`.
+
+### Event-sourcing aggregate
+
+`Event sourcing aggregate` is using/delegating a `Decider` to handle commands and produce events. It belongs to the Application layer.
+In order to handle the command, aggregate needs to fetch the current state (represented as a list of events)
+via `EventRepository.fetchEvents` function, and then delegate the command to the decider which can produce new events as a result.
+Produced events are then stored via `EventRepository.save` suspending function.
+
+![event sourced aggregate](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/es-aggregate.png)
+
+### State-stored aggregate
+
+`State stored aggregate` is using/delegating a `Decider` to handle commands and produce new state. It belongs to the Application layer.
+In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then
+delegate the command to the decider which can produce new state as a result.
+New state is then stored via `StateRepository.save` suspending function.
+
+![state storedaggregate](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/ss-aggregate.png)
+
 ## View
 
 `_View`  is a datatype that represents the event handling algorithm, responsible for translating the events into
@@ -109,6 +129,15 @@ export class View<S, E> extends _View<S, S, E> {}
 
 ![view image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/view.png)
 
+### Materialized View
+
+A `Materialized view` is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) as a
+result. Essentially, it represents the query/view side of the CQRS pattern. It belongs to the Application layer.
+
+In order to handle the event, materialized view needs to fetch the current state via `ViewStateRepository.fetchState`
+suspending function first, and then delegate the event to the view, which can produce new state as a result. New state
+is then stored via `ViewStateRepository.save` suspending function.
+
 ## Saga
 
 `Saga` is a datatype that represents the central point of control, deciding what to execute next (`A`). It is
@@ -134,3 +163,13 @@ export class Saga<AR, A> {
 
 ![saga image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/saga.png)
 
+### Saga Manager
+
+`Saga manager` is a stateless process orchestrator. It belongs to the Application layer.
+It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
+
+Saga manager is using/delegating a `Saga` to react on Action Results of type `AR` and produce new actions `A` which are
+going to be published via `ActionPublisher.publish` suspending function.
+
+---
+Created with :heart: by [Fraktalio](https://fraktalio.com/)
