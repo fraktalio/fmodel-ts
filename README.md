@@ -39,7 +39,7 @@ The new state is always evolved out of the current state `S` and the current eve
 
 **Both types of systems can be designed by using only these two functions and three generic parameters**
 
-![event sourced vs state stored](.assets/es-ss-system.png)
+![event sourced vs state stored](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/es-ss-system.png)
 
 `Decider` is the most important datatype, but it is not the only one. Let's discuss all of them, and visualize how they fit the Onion architecture.
 The arrows in the image are showing the direction of the dependency. Notice that all dependencies point inwards, and that Domain is not depending on anything.
