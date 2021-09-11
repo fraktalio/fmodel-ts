@@ -174,5 +174,10 @@ It is reacting on Action Results of type `AR` and produces new actions `A` based
 Saga manager is using/delegating a `Saga` to react on Action Results of type `AR` and produce new actions `A` which are
 going to be published via `ActionPublisher.publish` suspending function.
 
+## Credits
+
+Special credits to `Jérémie Chassaing` for sharing his [research](https://www.youtube.com/watch?v=kgYGMVDHQHs)
+and `Adam Dymitruk` for hosting the meetup.
+
 ---
 Created with :heart: by [Fraktalio](https://fraktalio.com/)
