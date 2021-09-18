@@ -87,7 +87,7 @@ We can now construct event-sourcing or/and state-storing aggregate by using the 
 `Event sourcing aggregate` is using/delegating a `Decider` to handle commands and produce events. It belongs to the Application layer.
 In order to handle the command, aggregate needs to fetch the current state (represented as a list of events)
 via `EventRepository.fetchEvents` function, and then delegate the command to the decider which can produce new events as a result.
-Produced events are then stored via `EventRepository.save` suspending function.
+Produced events are then stored via `EventRepository.save` function.
 
 ![event sourced aggregate](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/es-aggregate.png)
 
@@ -96,7 +96,7 @@ Produced events are then stored via `EventRepository.save` suspending function.
 `State stored aggregate` is using/delegating a `Decider` to handle commands and produce new state. It belongs to the Application layer.
 In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then
 delegate the command to the decider which can produce new state as a result.
-New state is then stored via `StateRepository.save` suspending function.
+New state is then stored via `StateRepository.save` function.
 
 ![state storedaggregate](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/ss-aggregate.png)
 
@@ -137,9 +137,8 @@ export class View<S, E> extends _View<S, S, E> {}
 A `Materialized view` is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) as a
 result. Essentially, it represents the query/view side of the CQRS pattern. It belongs to the Application layer.
 
-In order to handle the event, materialized view needs to fetch the current state via `ViewStateRepository.fetchState`
-suspending function first, and then delegate the event to the view, which can produce new state as a result. New state
-is then stored via `ViewStateRepository.save` suspending function.
+In order to handle the event, materialized view needs to fetch the current state via `ViewStateRepository.fetchState` function first, and then delegate the event to the view, which can produce new state as a result. New state
+is then stored via `ViewStateRepository.save` function.
 
 ## Saga
 
@@ -172,7 +171,7 @@ export class Saga<AR, A> {
 It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
 
 Saga manager is using/delegating a `Saga` to react on Action Results of type `AR` and produce new actions `A` which are
-going to be published via `ActionPublisher.publish` suspending function.
+going to be published via `ActionPublisher.publish` function.
 
 ## Credits
 
