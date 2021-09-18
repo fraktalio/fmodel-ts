@@ -1,13 +1,13 @@
 {
   "name": "@fraktalio/fmodel-ts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Functional domain modeling with TypeScript",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
   "module": "build/module/index.js",
   "repository": "https://github.com/fraktalio/fmodel-ts",
   "license": "Apache License, Version 2.0",
-  "keywords": [],
+  "keywords": ["DDD", "Eventsourcing", "CQRS", "Functional"],
   "scripts": {
     "build": "run-p build:*",
     "build:main": "tsc -p tsconfig.json",
@@ -39,9 +39,6 @@
   },
   "engines": {
     "node": ">=10"
-  },
-  "dependencies": {
-    "@bitauth/libauth": "^1.17.1"
   },
   "devDependencies": {
     "@ava/typescript": "^1.1.1",
