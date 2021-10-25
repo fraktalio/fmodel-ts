@@ -72,6 +72,11 @@ const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
     } else if (c instanceof MultiplyOddNumberCmd) {
       return [new OddNumberMultiplied(c.value)];
     } else {
+      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
+      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
+      const _: never = c;
+      console.log('Never just happened in decide function: ' + _);
       return [];
     }
   },
@@ -81,6 +86,8 @@ const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
     } else if (e instanceof OddNumberMultiplied) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
@@ -98,6 +105,8 @@ const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
     } else if (c instanceof MultiplyEvenNumberCmd) {
       return [new EvenNumberMultiplied(c.value)];
     } else {
+      const _: never = c;
+      console.log('Never just happened in decide function: ' + _);
       return [];
     }
   },
@@ -107,6 +116,8 @@ const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
     } else if (e instanceof EvenNumberMultiplied) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },

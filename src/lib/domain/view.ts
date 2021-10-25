@@ -142,6 +142,8 @@ export class _View<Si, So, E> {
  *    } else if (e instanceof OddNumberMultiplied) {
  *      return s * e.value;
  *    } else {
+ *      const _: never = e;
+ *      console.log('Never just happened in evolve function: ' + _);
  *      return s;
  *    }
  *  },

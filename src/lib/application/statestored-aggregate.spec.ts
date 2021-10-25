@@ -61,7 +61,6 @@ const decider: Decider<OddNumberCmd, number, number> = new Decider<
 >(
   (c, _) => {
     if (c instanceof AddOddNumberCmd) {
-      console.log('decide' + c);
       return [c.value];
     } else if (c instanceof MultiplyOddNumberCmd) {
       return [c.value];
@@ -71,7 +70,6 @@ const decider: Decider<OddNumberCmd, number, number> = new Decider<
   },
   (s, e) => {
     if (isNumber(e)) {
-      console.log('evolve' + e);
       return s + e;
     } else {
       return s;
@@ -87,7 +85,6 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
 >(
   (c, _) => {
     if (c instanceof AddEvenNumberCmd) {
-      console.log('decide2' + c);
       return [c.valueEven];
     } else if (c instanceof MultiplyEvenNumberCmd) {
       return [c.valueEven];
@@ -97,7 +94,6 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
   },
   (s, e) => {
     if (isNumber(e)) {
-      console.log('evolve2' + e);
       return s + e;
     } else {
       return s;
@@ -170,7 +166,6 @@ class StateRepositoryImpl3
   }
 
   save(s: readonly [number, number]): readonly [number, number] {
-    console.log('Saving' + s);
     storage3 = s;
     return s;
   }

@@ -31,6 +31,8 @@
  *    } else if (ar instanceof OddNumberMultipliedEvt) {
  *      return [new MultiplyEvenNumberCmd(ar.value + 1)];
  *    } else {
+ *      const _: never = e;
+ *      console.log('Never just happened in react function: ' + _);
  *      return [];
  *    }
  * });

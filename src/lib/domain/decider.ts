@@ -194,9 +194,9 @@ export class _Decider<C, Si, So, Ei, Eo> {
  * @typeParam C - comment for type `T`
  * @typeParam S - State type
  * @typeParam E - Event type
- * @param decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
- * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @param initialState - A starting point / An initial state of type `So`
+ * @param decide - A function/lambda that takes command of type `C` and input state of type `S` as parameters, and returns/emits the list of output events `E[]`>
+ * @param evolve - A function/lambda that takes input state of type `S` and input event of type `E` as parameters, and returns the output/new state `S`
+ * @param initialState - A starting point / An initial state of type `S`
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  *
@@ -209,6 +209,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
  *    } else if (c instanceof MultiplyOddNumberCmd) {
  *      return [new OddNumberMultiplied(c.value)];
  *    } else {
+ *      const _: never = c;
+ *      console.log('Never just happened in decide function: ' + _);
  *      return [];
  *    }
  *  },
@@ -218,6 +220,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
  *    } else if (e instanceof OddNumberMultiplied) {
  *      return s * e.value;
  *    } else {
+ *      const _: never = e;
+ *      console.log('Never just happened in evolve function: ' + _);
  *      return s;
  *    }
  *  },

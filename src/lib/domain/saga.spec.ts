@@ -66,6 +66,8 @@ const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   } else if (ar instanceof OddNumberMultipliedEvt) {
     return [new MultiplyEvenNumberCmd(ar.value + 1)];
   } else {
+    const _: never = ar;
+    console.log('Never just happened in react function: ' + _);
     return [];
   }
 });

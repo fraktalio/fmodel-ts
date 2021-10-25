@@ -44,6 +44,8 @@ const view: View<number, OddNumberEvt> = new View<number, OddNumberEvt>(
     } else if (e instanceof OddNumberMultiplied) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
@@ -57,6 +59,8 @@ const view2: View<number, EvenNumberEvt> = new View<number, EvenNumberEvt>(
     } else if (e instanceof EvenNumberMultiplied) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
