@@ -31,6 +31,8 @@ const view: View<number, number> = new View<number, number>((s, e) => {
   if (isNumber(e)) {
     return s + e;
   } else {
+    const _: never = e;
+    console.log('Never just happened: ' + _);
     return s;
   }
 }, 0);
@@ -39,6 +41,8 @@ const view2: View<string, string> = new View<string, string>((s, e) => {
   if (isString(e)) {
     return s.concat(e);
   } else {
+    const _: never = e;
+    console.log('Never just happened: ' + _);
     return s;
   }
 }, '');
@@ -49,20 +53,20 @@ let storage: number | null = null;
 let storage2: string | null = null;
 
 class ViewStateRepositoryImpl implements ViewStateRepository<number, number> {
-  fetchState(_e: number): number | null {
+  async fetchState(_e: number): Promise<number | null> {
     return storage;
   }
-  save(s: number): number {
+  async save(s: number): Promise<number> {
     storage = s;
     return s;
   }
 }
 
 class ViewStateRepository2Impl implements ViewStateRepository<string, string> {
-  fetchState(_e: string): string | null {
+  async fetchState(_e: string): Promise<string | null> {
     return storage2;
   }
-  save(s: string): string {
+  async save(s: string): Promise<string> {
     storage2 = s;
     return s;
   }
@@ -82,10 +86,10 @@ const materializedView: MaterializedView<number, number> = new MaterializedView<
 const materializedView2: MaterializedView<string, string> =
   new MaterializedView<string, string>(view2, repository2);
 
-test('view-handle', (t) => {
-  t.is(materializedView.handle(1), 1);
+test('view-handle', async (t) => {
+  t.is(await materializedView.handle(1), 1);
 });
 
-test('view2-handle', (t) => {
-  t.is(materializedView2.handle('Yin'), 'Yin');
+test('view2-handle', async (t) => {
+  t.is(await materializedView2.handle('Yin'), 'Yin');
 });

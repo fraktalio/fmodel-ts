@@ -44,7 +44,7 @@ export class SagaManager<AR, A> {
    * @param actionResult - Action Result represent the outcome of some action you want to handle in some way
    * @return list of Actions of type `A`
    */
-  handle(actionResult: AR): readonly A[] {
+  async handle(actionResult: AR): Promise<readonly A[]> {
     return this.actionPublisher.publishAll(this.saga.react(actionResult));
   }
 }
@@ -65,7 +65,7 @@ export interface ActionPublisher<A> {
    * @param a - Action of type `A`
    * @return newly published Action of type `A`
    */
-  readonly publish: (a: A) => A;
+  readonly publish: (a: A) => Promise<A>;
 
   /**
    * Publish actions
@@ -73,5 +73,5 @@ export interface ActionPublisher<A> {
    * @param aList - of Actions of type `A`
    * @return list of newly published Actions of type `A`
    */
-  readonly publishAll: (aList: readonly A[]) => readonly A[];
+  readonly publishAll: (aList: readonly A[]) => Promise<readonly A[]>;
 }

@@ -43,22 +43,22 @@ const saga2: Saga<string, string> = new Saga<string, string>((ar) => {
 });
 
 class ActionPublisherImpl implements ActionPublisher<number> {
-  publish(a: number): number {
+  async publish(a: number): Promise<number> {
     return a;
   }
 
-  publishAll(aList: readonly number[]): readonly number[] {
+  async publishAll(aList: readonly number[]): Promise<readonly number[]> {
     return aList;
   }
 }
 const actionPublisher: ActionPublisher<number> = new ActionPublisherImpl();
 
 class ActionPublisherImpl2 implements ActionPublisher<string> {
-  publish(a: string): string {
+  async publish(a: string): Promise<string> {
     return a;
   }
 
-  publishAll(aList: readonly string[]): readonly string[] {
+  async publishAll(aList: readonly string[]): Promise<readonly string[]> {
     return aList;
   }
 }
@@ -75,13 +75,13 @@ const sagaManager2: SagaManager<string, string> = new SagaManager<
 >(saga2, actionPublisher2);
 
 class ActionPublisherImpl3 implements ActionPublisher<string | number> {
-  publish(a: string | number): string | number {
+  async publish(a: string | number): Promise<string | number> {
     return a;
   }
 
-  publishAll(
+  async publishAll(
     aList: readonly (string | number)[]
-  ): readonly (string | number)[] {
+  ): Promise<readonly (string | number)[]> {
     return aList;
   }
 }
@@ -95,18 +95,18 @@ const sagaManager3: SagaManager<string | number, string | number> =
     actionPublisher3
   );
 
-test('saga-handle', (t) => {
-  t.deepEqual(sagaManager.handle(1), [1]);
+test('saga-handle', async (t) => {
+  t.deepEqual(await sagaManager.handle(1), [1]);
 });
 
-test('saga2-handle', (t) => {
-  t.deepEqual(sagaManager2.handle('Yin'), ['Yin']);
+test('saga2-handle', async (t) => {
+  t.deepEqual(await sagaManager2.handle('Yin'), ['Yin']);
 });
 
-test('saga3-handle', (t) => {
-  t.deepEqual(sagaManager3.handle('Yin'), ['Yin']);
+test('saga3-handle', async (t) => {
+  t.deepEqual(await sagaManager3.handle('Yin'), ['Yin']);
 });
 
-test('saga4-handle', (t) => {
-  t.deepEqual(sagaManager3.handle(1), [1]);
+test('saga4-handle', async (t) => {
+  t.deepEqual(await sagaManager3.handle(1), [1]);
 });

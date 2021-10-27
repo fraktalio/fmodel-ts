@@ -43,8 +43,8 @@ export class MaterializedView<S, E> {
    * @param event Event of type `E` to be handled
    * @return State of type `S`
    */
-  handle(event: E): S {
-    const currentState = this.viewStateRepository.fetchState(event);
+  async handle(event: E): Promise<S> {
+    const currentState = await this.viewStateRepository.fetchState(event);
     const newState = this.view.evolve(
       currentState ? currentState : this.view.initialState,
       event
@@ -71,7 +71,7 @@ export interface ViewStateRepository<E, S> {
    *
    * @return current state of type `S`
    */
-  readonly fetchState: (e: E) => S | null;
+  readonly fetchState: (e: E) => Promise<S | null>;
 
   /**
    * Save state
@@ -79,5 +79,5 @@ export interface ViewStateRepository<E, S> {
    * @param s - State of type `S`
    * @return newly saved State of type `S`
    */
-  readonly save: (s: S) => S;
+  readonly save: (s: S) => Promise<S>;
 }

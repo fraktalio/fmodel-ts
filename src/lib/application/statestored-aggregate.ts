@@ -63,8 +63,8 @@ export class StateStoredAggregate<C, S, E> {
    * @param command - Command of type `C` to be handled
    * @return state of type `S`
    */
-  handle(command: C): S {
-    const currentState = this.stateRepository.fetchState(command);
+  async handle(command: C): Promise<S> {
+    const currentState = await this.stateRepository.fetchState(command);
     return this.stateRepository.save(
       this.calculateNewState(
         currentState ? currentState : this.decider.initialState,
@@ -92,7 +92,7 @@ export interface StateRepository<C, S> {
    *
    * @return current state of type `S`
    */
-  readonly fetchState: (c: C) => S | null;
+  readonly fetchState: (c: C) => Promise<S | null>;
 
   /**
    * Save state
@@ -100,5 +100,5 @@ export interface StateRepository<C, S> {
    * @param s - State of type `S`
    * @return newly saved State of type `S`
    */
-  readonly save: (s: S) => S;
+  readonly save: (s: S) => Promise<S>;
 }

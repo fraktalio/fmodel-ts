@@ -65,6 +65,11 @@ const decider: Decider<OddNumberCmd, number, number> = new Decider<
     } else if (c instanceof MultiplyOddNumberCmd) {
       return [c.value];
     } else {
+      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
+      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
+      const _: never = c;
+      console.log('Never just happened: ' + _);
       return [];
     }
   },
@@ -72,6 +77,8 @@ const decider: Decider<OddNumberCmd, number, number> = new Decider<
     if (isNumber(e)) {
       return s + e;
     } else {
+      const _: never = e;
+      console.log('Never just happened: ' + _);
       return s;
     }
   },
@@ -89,6 +96,8 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
     } else if (c instanceof MultiplyEvenNumberCmd) {
       return [c.valueEven];
     } else {
+      const _: never = c;
+      console.log('Never just happened: ' + _);
       return [];
     }
   },
@@ -96,6 +105,8 @@ const decider2: Decider<EvenNumberCmd, number, number> = new Decider<
     if (isNumber(e)) {
       return s + e;
     } else {
+      const _: never = e;
+      console.log('Never just happened: ' + _);
       return s;
     }
   },
@@ -135,21 +146,21 @@ let storage2: number | null = null;
 let storage3: readonly [number, number] | null = null;
 
 class StateRepositoryImpl implements StateRepository<OddNumberCmd, number> {
-  fetchState(_c: OddNumberCmd): number | null {
+  async fetchState(_c: OddNumberCmd): Promise<number | null> {
     return storage;
   }
-  save(s: number): number {
+  async save(s: number): Promise<number> {
     storage = s;
     return s;
   }
 }
 
 class StateRepositoryImpl2 implements StateRepository<EvenNumberCmd, number> {
-  fetchState(_c: EvenNumberCmd): number | null {
+  async fetchState(_c: EvenNumberCmd): Promise<number | null> {
     return storage2;
   }
 
-  save(s: number): number {
+  async save(s: number): Promise<number> {
     storage2 = s;
     return s;
   }
@@ -159,13 +170,13 @@ class StateRepositoryImpl3
   implements
     StateRepository<EvenNumberCmd | OddNumberCmd, readonly [number, number]>
 {
-  fetchState(
+  async fetchState(
     _c: EvenNumberCmd | OddNumberCmd
-  ): readonly [number, number] | null {
+  ): Promise<readonly [number, number] | null> {
     return storage3;
   }
 
-  save(s: readonly [number, number]): readonly [number, number] {
+  async save(s: readonly [number, number]): Promise<readonly [number, number]> {
     storage3 = s;
     return s;
   }
@@ -210,14 +221,14 @@ const aggregate3: StateStoredAggregate<
   number
 >(decider.combine(decider2), repository3, saga);
 
-test('aggregate-handle', (t) => {
-  t.deepEqual(aggregate.handle(new AddOddNumberCmd(1)), 1);
+test('aggregate-handle', async (t) => {
+  t.deepEqual(await aggregate.handle(new AddOddNumberCmd(1)), 1);
 });
 
-test('aggregate-handle2', (t) => {
-  t.deepEqual(aggregate2.handle(new AddEvenNumberCmd(2)), 2);
+test('aggregate-handle2', async (t) => {
+  t.deepEqual(await aggregate2.handle(new AddEvenNumberCmd(2)), 2);
 });
 
-test('aggregate-handle4', (t) => {
-  t.deepEqual(aggregate3.handle(new AddEvenNumberCmd(7)), [18, 18]);
+test('aggregate-handle4', async (t) => {
+  t.deepEqual(await aggregate3.handle(new AddEvenNumberCmd(7)), [18, 18]);
 });

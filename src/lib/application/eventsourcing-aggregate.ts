@@ -73,12 +73,10 @@ export class EventSourcingAggregate<C, S, E> {
    * @param command - Command of type `C`
    * @return list of persisted events ot type `E`
    */
-  handle(command: C): readonly E[] {
+  async handle(command: C): Promise<readonly E[]> {
+    const currentEvents = await this.eventRepository.fetchEvents(command);
     return this.eventRepository.saveAll(
-      this.calculateNewEvents(
-        this.eventRepository.fetchEvents(command),
-        command
-      )
+      this.calculateNewEvents(currentEvents, command)
     );
   }
 }
@@ -101,7 +99,7 @@ export interface EventRepository<C, E> {
    *
    * @return list of Events of type `E`
    */
-  readonly fetchEvents: (c: C) => readonly E[];
+  readonly fetchEvents: (c: C) => Promise<readonly E[]>;
 
   /**
    * Save event
@@ -109,7 +107,7 @@ export interface EventRepository<C, E> {
    * @param e - Event of type `E`
    * @return newly saved Event of type `E`
    */
-  readonly save: (e: E) => E;
+  readonly save: (e: E) => Promise<E>;
 
   /**
    * Save events
@@ -117,5 +115,5 @@ export interface EventRepository<C, E> {
    * @param eList - list of Events of type `E`
    * @return newly saved list of Events of type `E`
    */
-  readonly saveAll: (eList: readonly E[]) => readonly E[];
+  readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 }

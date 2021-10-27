@@ -88,6 +88,11 @@ const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
     } else if (c instanceof MultiplyOddNumberCmd) {
       return [new OddNumberMultipliedEvt(c.value)];
     } else {
+      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
+      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
+      const _: never = c;
+      console.log('Never just happened: ' + _);
       return [];
     }
   },
@@ -97,6 +102,8 @@ const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
     } else if (e instanceof OddNumberMultipliedEvt) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened: ' + _);
       return s;
     }
   },
@@ -114,6 +121,8 @@ const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
     } else if (c instanceof MultiplyEvenNumberCmd) {
       return [new EvenNumberMultipliedEvt(c.value)];
     } else {
+      const _: never = c;
+      console.log('Never just happened: ' + _);
       return [];
     }
   },
@@ -123,6 +132,8 @@ const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
     } else if (e instanceof EvenNumberMultipliedEvt) {
       return s * e.value;
     } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
@@ -142,6 +153,11 @@ const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   } else if (ar instanceof OddNumberMultipliedEvt) {
     return [new MultiplyEvenNumberCmd(ar.value + 1)];
   } else {
+    // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+    // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
+    // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
+    const _: never = ar;
+    console.log('Never just happened: ' + _);
     return [];
   }
 });
@@ -157,15 +173,18 @@ const storage3: readonly (OddNumberEvt | EvenNumberEvt)[] = [];
 class EventRepositoryImpl
   implements EventRepository<OddNumberCmd, OddNumberEvt>
 {
-  fetchEvents(_c: OddNumberCmd): readonly OddNumberEvt[] {
+  async fetchEvents(_c: OddNumberCmd): Promise<readonly OddNumberEvt[]> {
     return storage;
   }
 
-  save(e: OddNumberEvt): OddNumberEvt {
+  async save(e: OddNumberEvt): Promise<OddNumberEvt> {
     storage.concat(e);
     return e;
   }
-  saveAll(eList: readonly OddNumberEvt[]): readonly OddNumberEvt[] {
+
+  async saveAll(
+    eList: readonly OddNumberEvt[]
+  ): Promise<readonly OddNumberEvt[]> {
     storage.concat(eList);
     return eList;
   }
@@ -174,15 +193,18 @@ class EventRepositoryImpl
 class EventRepositoryImpl2
   implements EventRepository<EvenNumberCmd, EvenNumberEvt>
 {
-  fetchEvents(_c: EvenNumberCmd): readonly EvenNumberEvt[] {
+  async fetchEvents(_c: EvenNumberCmd): Promise<readonly EvenNumberEvt[]> {
     return storage2;
   }
 
-  save(e: EvenNumberEvt): EvenNumberEvt {
+  async save(e: EvenNumberEvt): Promise<EvenNumberEvt> {
     storage2.concat(e);
     return e;
   }
-  saveAll(eList: readonly EvenNumberEvt[]): readonly EvenNumberEvt[] {
+
+  async saveAll(
+    eList: readonly EvenNumberEvt[]
+  ): Promise<readonly EvenNumberEvt[]> {
     storage2.concat(eList);
     return eList;
   }
@@ -192,18 +214,22 @@ class EventRepositoryImpl3
   implements
     EventRepository<EvenNumberCmd | OddNumberCmd, OddNumberEvt | EvenNumberEvt>
 {
-  fetchEvents(
+  async fetchEvents(
     _c: EvenNumberCmd | OddNumberCmd
-  ): readonly (OddNumberEvt | EvenNumberEvt)[] {
+  ): Promise<readonly (OddNumberEvt | EvenNumberEvt)[]> {
     return storage3;
   }
-  save(e: OddNumberEvt | EvenNumberEvt): OddNumberEvt | EvenNumberEvt {
+
+  async save(
+    e: OddNumberEvt | EvenNumberEvt
+  ): Promise<OddNumberEvt | EvenNumberEvt> {
     storage3.concat(e);
     return e;
   }
-  saveAll(
+
+  async saveAll(
     eList: readonly (OddNumberEvt | EvenNumberEvt)[]
-  ): readonly (OddNumberEvt | EvenNumberEvt)[] {
+  ): Promise<readonly (OddNumberEvt | EvenNumberEvt)[]> {
     storage3.concat(eList);
     return eList;
   }
@@ -262,38 +288,38 @@ const aggregate4: EventSourcingAggregate<
 // ############ Tests #############
 // ################################
 
-test('aggregate-handle', (t) => {
-  t.deepEqual(aggregate.handle(new AddOddNumberCmd(1)), [
+test('aggregate-handle', async (t) => {
+  t.deepEqual(await aggregate.handle(new AddOddNumberCmd(1)), [
     new OddNumberAddedEvt(1),
   ]);
 });
 
-test('aggregate-handle2', (t) => {
-  t.deepEqual(aggregate2.handle(new AddEvenNumberCmd(2)), [
+test('aggregate-handle2', async (t) => {
+  t.deepEqual(await aggregate2.handle(new AddEvenNumberCmd(2)), [
     new EvenNumberAddedEvt(2),
   ]);
 });
 
-test('aggregate-handle3', (t) => {
-  t.deepEqual(aggregate3.handle(new AddOddNumberCmd(1)), [
+test('aggregate-handle3', async (t) => {
+  t.deepEqual(await aggregate3.handle(new AddOddNumberCmd(1)), [
     new OddNumberAddedEvt(1),
   ]);
 });
 
-test('aggregate-handle4', (t) => {
-  t.deepEqual(aggregate3.handle(new AddEvenNumberCmd(2)), [
+test('aggregate-handle4', async (t) => {
+  t.deepEqual(await aggregate3.handle(new AddEvenNumberCmd(2)), [
     new EvenNumberAddedEvt(2),
   ]);
 });
 
-test('aggregate-handle5', (t) => {
-  t.deepEqual(aggregate4.handle(new AddEvenNumberCmd(6)), [
+test('aggregate-handle5', async (t) => {
+  t.deepEqual(await aggregate4.handle(new AddEvenNumberCmd(6)), [
     new EvenNumberAddedEvt(6),
   ]);
 });
 
-test('aggregate-handle6', (t) => {
-  t.deepEqual(aggregate4.handle(new AddOddNumberCmd(7)), [
+test('aggregate-handle6', async (t) => {
+  t.deepEqual(await aggregate4.handle(new AddOddNumberCmd(7)), [
     new OddNumberAddedEvt(7),
     new EvenNumberAddedEvt(8),
   ]);
