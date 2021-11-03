@@ -41,7 +41,7 @@
     "node": ">=10"
   },
   "devDependencies": {
-    "@ava/typescript": "^1.1.1",
+    "@ava/typescript": "^3.0.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.1",
     "@types/node": "^16.9.1",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
