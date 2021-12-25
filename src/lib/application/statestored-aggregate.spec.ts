@@ -20,7 +20,13 @@ import test from 'ava';
 import { Decider } from '../domain/decider';
 import { Saga } from '../domain/saga';
 
-import { StateRepository, StateStoredAggregate } from './statestored-aggregate';
+import {
+  IStateStoredAggregate,
+  IStateStoredOrchestratingAggregate,
+  StateRepository,
+  StateStoredAggregate,
+  StateStoredOrchestratingAggregate,
+} from './statestored-aggregate';
 
 // ################################
 // ###### Domain - Commands #######
@@ -197,25 +203,20 @@ const repository3: StateRepository<
 // #### Application - Aggregate ###
 // ################################
 
-const aggregate: StateStoredAggregate<OddNumberCmd, number, number> =
-  new StateStoredAggregate<OddNumberCmd, number, number>(
-    decider,
-    repository,
-    undefined
-  );
+const aggregate: IStateStoredAggregate<OddNumberCmd, number, number> =
+  new StateStoredAggregate<OddNumberCmd, number, number>(decider, repository);
 
-const aggregate2: StateStoredAggregate<EvenNumberCmd, number, number> =
+const aggregate2: IStateStoredAggregate<EvenNumberCmd, number, number> =
   new StateStoredAggregate<EvenNumberCmd, number, number>(
     decider2,
-    repository2,
-    undefined
+    repository2
   );
 
-const aggregate3: StateStoredAggregate<
+const aggregate3: IStateStoredOrchestratingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   number
-> = new StateStoredAggregate<
+> = new StateStoredOrchestratingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   number

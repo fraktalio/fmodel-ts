@@ -19,8 +19,8 @@ import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
 
 /**
- * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
- * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingAggregate.decider` which can produce new event(s) as a result.
+ * Event sourcing aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
  *
  * Produced events are then stored via `EventRepository.save` function.
  *
@@ -37,10 +37,10 @@ export interface IEventSourcingAggregate<C, S, E>
 }
 
 /**
- * Event sourcing orchestrating aggregate is using/delegating a `EventSourcingOrchestratingAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
- * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingOrchestratingAggregate.decider` which can produce new event(s) as a result.
+ * Event sourcing orchestrating aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
  *
- * If the `EventSourcingOrchestratingAggregate.decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingAggregate.saga` could be used to react on new events and send new commands to the `EventSourcingOrchestratingAggregate.decider` recursively, in one transaction.
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingAggregate.saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
  *
  * Produced events are then stored via `EventRepository.save` function.
  *
@@ -52,9 +52,7 @@ export interface IEventSourcingAggregate<C, S, E>
  */
 export interface IEventSourcingOrchestratingAggregate<C, S, E>
   extends IEventSourcingAggregate<C, S, E>,
-    ISaga<E, C> {
-  handle(command: C): Promise<readonly E[]>;
-}
+    ISaga<E, C> {}
 
 /**
  * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
@@ -102,7 +100,7 @@ export class EventSourcingAggregate<C, S, E>
    * @param events
    * @param command
    */
-  private computeNewEvents(events: readonly E[], command: C): readonly E[] {
+  protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
     const currentState = events.reduce(this.evolve, this.initialState);
     return this.decide(command, currentState);
   }
@@ -134,6 +132,7 @@ export class EventSourcingAggregate<C, S, E>
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class EventSourcingOrchestratingAggregate<C, S, E>
+  extends EventSourcingAggregate<C, S, E>
   implements IEventSourcingOrchestratingAggregate<C, S, E>
 {
   /**
@@ -144,26 +143,15 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
    * @param saga - A saga component of type `Saga`<`E`, `C`>
    */
   constructor(
-    private readonly decider: IDecider<C, S, E>,
-    private readonly eventRepository: EventRepository<C, E>,
+    decider: IDecider<C, S, E>,
+    eventRepository: EventRepository<C, E>,
     private readonly saga: ISaga<E, C>
   ) {
-    this.decide = this.decider.decide;
-    this.evolve = this.decider.evolve;
-    this.initialState = this.decider.initialState;
+    super(decider, eventRepository);
     this.react = this.saga.react;
-    this.fetchEvents = this.eventRepository.fetchEvents;
-    this.save = this.eventRepository.save;
-    this.saveAll = this.eventRepository.saveAll;
   }
 
-  readonly decide: (c: C, s: S) => readonly E[];
-  readonly evolve: (s: S, e: E) => S;
-  readonly initialState: S;
   readonly react: (ar: E) => readonly C[];
-  readonly fetchEvents: (c: C) => Promise<readonly E[]>;
-  readonly save: (e: E) => Promise<E>;
-  readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 
   /**
    * An algorithm to compute new events based on the old events and the command being handled.
@@ -171,10 +159,9 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
    * @param events
    * @param command
    */
-  private computeNewEvents(events: readonly E[], command: C): readonly E[] {
-    const currentState = events.reduce(this.evolve, this.initialState);
+  protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
     // eslint-disable-next-line functional/no-let
-    let resultingEvents = this.decide(command, currentState);
+    let resultingEvents = super.computeNewEvents(events, command);
 
     resultingEvents
       .flatMap((it) => this.react(it))
@@ -186,17 +173,6 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
       );
 
     return resultingEvents;
-  }
-
-  /**
-   * Handles the command of type `C`, and returns new persisted events.
-   *
-   * @param command - Command of type `C`
-   * @return list of persisted events ot type `E`
-   */
-  async handle(command: C): Promise<readonly E[]> {
-    const currentEvents = await this.fetchEvents(command);
-    return this.saveAll(this.computeNewEvents(currentEvents, command));
   }
 }
 
