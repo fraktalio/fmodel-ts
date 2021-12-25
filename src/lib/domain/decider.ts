@@ -11,9 +11,45 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression */
+/* eslint-disable functional/no-this-expression,functional/no-mixed-type, functional/no-class, functional/prefer-type-literal */
 
-/* eslint-disable functional/no-class */
+/**
+ * `I_Decider` represents the main decision-making algorithm.
+ * It has five generic parameters `C`, `Si`, `So`, `Ei`, `Eo` , representing the type of the values that `I_Decider` may contain or use.
+ * `I_Decider` can be specialized for any type `C` or `Si` or `So` or `Ei` or `Eo` because these types does not affect its behavior.
+ * `I_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
+ *
+ * `I_Decider` is a pure domain interface.
+ *
+ * @typeParam C - Command
+ * @typeParam Si - Input_State type
+ * @typeParam So - Output_State type
+ * @typeParam Ei - Input_Event type
+ * @typeParam Eo - Output_Event type
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface I_Decider<C, Si, So, Ei, Eo> {
+  readonly decide: (c: C, s: Si) => readonly Eo[];
+  readonly evolve: (s: Si, e: Ei) => So;
+  readonly initialState: So;
+}
+
+/**
+ * `IDecider` represents the main decision-making algorithm.
+ * It has five generic parameters `C`, `S`, `E` , representing the type of the values that `IDecider` may contain or use.
+ * `IDecider` can be specialized for any type `C` or `S` or `E` because these types does not affect its behavior.
+ * `IDecider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
+ *
+ * `IDecider` is a pure domain interface.
+ *
+ * @typeParam C - Command
+ * @typeParam S - State
+ * @typeParam E - Event
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
 
 /**
  * `_Decider` is a datatype that represents the main decision-making algorithm.
@@ -23,6 +59,7 @@
  *
  * `_Decider` is a pure domain component.
  *
+ * @typeParam C - Command
  * @typeParam Si - Input_State type
  * @typeParam So - Output_State type
  * @typeParam Ei - Input_Event type
@@ -191,7 +228,7 @@ export class _Decider<C, Si, So, Ei, Eo> {
  *
  * `Decider` is a pure domain component.
  *
- * @typeParam C - comment for type `T`
+ * @typeParam C - Command type
  * @typeParam S - State type
  * @typeParam E - Event type
  * @param decide - A function/lambda that takes command of type `C` and input state of type `S` as parameters, and returns/emits the list of output events `E[]`>

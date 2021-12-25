@@ -11,9 +11,20 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression */
+/* eslint-disable functional/no-this-expression, functional/no-class, functional/prefer-type-literal */
 
-/* eslint-disable functional/no-class */
+/**
+ * `ISaga` represents the central point of control deciding what to execute next `A`.
+ * It is responsible for mapping different events from aggregates into action results `AR` that the `Saga` then can use to calculate the next actions `A` to be mapped to command of other aggregates.
+ *
+ * @typeParam AR - Action Result type
+ * @typeParam A - Action type
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface ISaga<AR, A> {
+  readonly react: (ar: AR) => readonly A[];
+}
 
 /**
  * `Saga` is a datatype that represents the central point of control deciding what to execute next `A`.
@@ -39,7 +50,7 @@
  * ```
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class Saga<AR, A> {
+export class Saga<AR, A> implements ISaga<AR, A> {
   /**
    * @constructor Creates `Saga`
    * @param react - A function/lambda that takes input state of type `AR`, and returns the list of actions `A[]`>.

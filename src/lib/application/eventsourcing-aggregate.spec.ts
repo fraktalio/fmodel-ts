@@ -23,6 +23,9 @@ import { Saga } from '../domain/saga';
 import {
   EventRepository,
   EventSourcingAggregate,
+  EventSourcingOrchestratingAggregate,
+  IEventSourcingAggregate,
+  IEventSourcingOrchestratingAggregate,
 } from './eventsourcing-aggregate';
 
 // ################################
@@ -250,21 +253,22 @@ const repository3: EventRepository<
 // ### Application - Aggregates ###
 // ################################
 
-const aggregate: EventSourcingAggregate<OddNumberCmd, number, OddNumberEvt> =
+const aggregate: IEventSourcingAggregate<OddNumberCmd, number, OddNumberEvt> =
   new EventSourcingAggregate<OddNumberCmd, number, OddNumberEvt>(
     decider,
-    repository,
-    undefined
+    repository
   );
 
-const aggregate2: EventSourcingAggregate<EvenNumberCmd, number, EvenNumberEvt> =
-  new EventSourcingAggregate<EvenNumberCmd, number, EvenNumberEvt>(
-    decider2,
-    repository2,
-    undefined
-  );
+const aggregate2: IEventSourcingAggregate<
+  EvenNumberCmd,
+  number,
+  EvenNumberEvt
+> = new EventSourcingAggregate<EvenNumberCmd, number, EvenNumberEvt>(
+  decider2,
+  repository2
+);
 
-const aggregate3: EventSourcingAggregate<
+const aggregate3: IEventSourcingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   OddNumberEvt | EvenNumberEvt
@@ -272,13 +276,13 @@ const aggregate3: EventSourcingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   OddNumberEvt | EvenNumberEvt
->(decider.combine(decider2), repository3, undefined);
+>(decider.combine(decider2), repository3);
 
-const aggregate4: EventSourcingAggregate<
+const aggregate4: IEventSourcingOrchestratingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   OddNumberEvt | EvenNumberEvt
-> = new EventSourcingAggregate<
+> = new EventSourcingOrchestratingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
   OddNumberEvt | EvenNumberEvt
