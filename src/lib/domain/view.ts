@@ -186,7 +186,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class View<S, E> extends _View<S, S, E> {}
+export class View<S, E> extends _View<S, S, E> implements IView<S, E> {}
 
 /**
  * Identity function

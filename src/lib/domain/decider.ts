@@ -67,7 +67,9 @@ export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class _Decider<C, Si, So, Ei, Eo> {
+export class _Decider<C, Si, So, Ei, Eo>
+  implements I_Decider<C, Si, So, Ei, Eo>
+{
   /**
    * @constructor Creates the `_Decider`
    * @param decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
@@ -266,7 +268,9 @@ export class _Decider<C, Si, So, Ei, Eo> {
  * );
  * ```
  */
-export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}
+export class Decider<C, S, E>
+  extends _Decider<C, S, S, E, E>
+  implements IDecider<C, S, E> {}
 
 /**
  * Identity function
