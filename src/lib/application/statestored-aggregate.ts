@@ -33,7 +33,7 @@ import { ISaga } from '../domain/saga';
 export interface IStateStoredAggregate<C, S, E>
   extends IDecider<C, S, E>,
     StateRepository<C, S> {
-  handle(command: C): Promise<S>;
+  readonly handle: (command: C) => Promise<S>;
 }
 
 /**

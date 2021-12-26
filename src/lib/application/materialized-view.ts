@@ -35,7 +35,7 @@ export interface IMaterializedView<S, E>
    * @param event Event of type `E` to be handled
    * @return State of type `S`
    */
-  handle(event: E): Promise<S>;
+  readonly handle: (event: E) => Promise<S>;
 }
 
 /**

@@ -33,7 +33,7 @@ import { ISaga } from '../domain/saga';
 export interface IEventSourcingAggregate<C, S, E>
   extends IDecider<C, S, E>,
     EventRepository<C, E> {
-  handle(command: C): Promise<readonly E[]>;
+  readonly handle: (command: C) => Promise<readonly E[]>;
 }
 
 /**
@@ -87,6 +87,7 @@ export class EventSourcingAggregate<C, S, E>
     this.save = this.eventRepository.save;
     this.saveAll = this.eventRepository.saveAll;
   }
+
   readonly decide: (c: C, s: S) => readonly E[];
   readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;

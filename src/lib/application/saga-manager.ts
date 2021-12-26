@@ -28,7 +28,7 @@ import { ISaga } from '../domain/saga';
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export interface ISagaManager<AR, A> extends ISaga<AR, A>, ActionPublisher<A> {
-  handle(actionResult: AR): Promise<readonly A[]>;
+  readonly handle: (actionResult: AR) => Promise<readonly A[]>;
 }
 
 /**
