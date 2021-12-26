@@ -7,7 +7,12 @@
   "module": "build/module/index.js",
   "repository": "https://github.com/fraktalio/fmodel-ts",
   "license": "Apache License, Version 2.0",
-  "keywords": ["DDD", "Eventsourcing", "CQRS", "Functional"],
+  "keywords": [
+    "DDD",
+    "Eventsourcing",
+    "CQRS",
+    "Functional"
+  ],
   "scripts": {
     "build": "run-p build:*",
     "build:main": "tsc -p tsconfig.json",
@@ -49,7 +54,7 @@
     "ava": "^3.12.1",
     "codecov": "^3.5.0",
     "cspell": "^5.9.1",
-    "cz-conventional-changelog": "^3.3.0",
+    "cz-conventional-changelog": "^3.0.1",
     "eslint": "^7.8.0",
     "eslint-config-prettier": "^6.11.0",
     "eslint-plugin-eslint-comments": "^3.2.0",
