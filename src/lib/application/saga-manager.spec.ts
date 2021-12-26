@@ -16,7 +16,7 @@ import test from 'ava';
 
 import { Saga } from '../domain/saga';
 
-import { ActionPublisher, SagaManager } from './saga-manager';
+import { ActionPublisher, ISagaManager, SagaManager } from './saga-manager';
 
 function isNumber(x: any): x is number {
   return typeof x === 'number';
@@ -64,12 +64,12 @@ class ActionPublisherImpl2 implements ActionPublisher<string> {
 }
 const actionPublisher2: ActionPublisher<string> = new ActionPublisherImpl2();
 
-const sagaManager: SagaManager<number, number> = new SagaManager<
+const sagaManager: ISagaManager<number, number> = new SagaManager<
   number,
   number
 >(saga, actionPublisher);
 
-const sagaManager2: SagaManager<string, string> = new SagaManager<
+const sagaManager2: ISagaManager<string, string> = new SagaManager<
   string,
   string
 >(saga2, actionPublisher2);
@@ -89,7 +89,7 @@ class ActionPublisherImpl3 implements ActionPublisher<string | number> {
 const actionPublisher3: ActionPublisher<string | number> =
   new ActionPublisherImpl3();
 
-const sagaManager3: SagaManager<string | number, string | number> =
+const sagaManager3: ISagaManager<string | number, string | number> =
   new SagaManager<string | number, string | number>(
     saga.combine(saga2),
     actionPublisher3

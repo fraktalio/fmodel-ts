@@ -15,15 +15,14 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { Decider } from '../domain/decider';
-import { Saga } from '../domain/saga';
+import { IDecider } from '../domain/decider';
+import { ISaga } from '../domain/saga';
 
 /**
- * State stored aggregate is using/delegating a `StateStoredAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `StateStoredAggregate.decider` which can produce new state as a result.
- * If the `StateStoredAggregate.decider` is combined out of many deciders via `combine` function, an optional `StateStoredAggregate.saga` could be used to react on new events and send new commands to the `StateStoredAggregate.decider` recursively, in one transaction.
+ * State stored aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  *
- * New state is then stored via `StateRepository.save` suspending function.
+ * New state is then stored via `StateRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
@@ -31,30 +30,75 @@ import { Saga } from '../domain/saga';
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class StateStoredAggregate<C, S, E> {
+export interface IStateStoredAggregate<C, S, E>
+  extends IDecider<C, S, E>,
+    StateRepository<C, S> {
+  handle(command: C): Promise<S>;
+}
+
+/**
+ * State stored aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
+ *
+ * New state is then stored via `StateRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IStateStoredOrchestratingAggregate<C, S, E>
+  extends IStateStoredAggregate<C, S, E>,
+    ISaga<E, C> {}
+
+/**
+ * State stored aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ *
+ * New state is then stored via `StateRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class StateStoredAggregate<C, S, E>
+  implements IStateStoredAggregate<C, S, E>
+{
   /**
    * @constructor Creates `StateStoredAggregate`
-   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
    * @param stateRepository  - Interface for `S`tate management/persistence
-   * @param saga - An optional saga component of type `Saga`<`E`, `C`>
    */
   constructor(
-    private readonly decider: Decider<C, S, E>,
-    private readonly stateRepository: StateRepository<C, S>,
-    private readonly saga?: Saga<E, C>
-  ) {}
-  private calculateNewState(state: S, command: C): S {
-    const events = this.decider.decide(command, state);
-    // eslint-disable-next-line functional/no-let
-    let newState = events.reduce(this.decider.evolve, state);
+    private readonly decider: IDecider<C, S, E>,
+    private readonly stateRepository: StateRepository<C, S>
+  ) {
+    this.decide = this.decider.decide;
+    this.evolve = this.decider.evolve;
+    this.initialState = this.decider.initialState;
+    this.fetchState = this.stateRepository.fetchState;
+    this.save = this.stateRepository.save;
+  }
 
-    if (typeof this.saga !== 'undefined') {
-      const saga = this.saga;
-      events
-        .flatMap((it) => saga.react(it))
-        .forEach((c) => (newState = this.calculateNewState(newState, c)));
-    }
-    return newState;
+  readonly decide: (c: C, s: S) => readonly E[];
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
+  readonly fetchState: (c: C) => Promise<S | null>;
+  readonly save: (s: S) => Promise<S>;
+
+  /**
+   * An algorithm to compute new state based on the old state and the command being handled.
+   *
+   * @param state
+   * @param command
+   */
+  protected computeNewState(state: S, command: C): S {
+    const events = this.decide(command, state);
+    return events.reduce(this.evolve, state);
   }
 
   /**
@@ -64,13 +108,71 @@ export class StateStoredAggregate<C, S, E> {
    * @return state of type `S`
    */
   async handle(command: C): Promise<S> {
-    const currentState = await this.stateRepository.fetchState(command);
-    return this.stateRepository.save(
-      this.calculateNewState(
-        currentState ? currentState : this.decider.initialState,
+    const currentState = await this.fetchState(command);
+    return this.save(
+      this.computeNewState(
+        currentState ? currentState : this.initialState,
         command
       )
     );
+  }
+}
+
+/**
+ * State stored aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
+ *
+ * New state is then stored via `StateRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class StateStoredOrchestratingAggregate<C, S, E>
+  extends StateStoredAggregate<C, S, E>
+  implements IStateStoredOrchestratingAggregate<C, S, E>
+{
+  /**
+   * @constructor Creates `StateStoredAggregate`
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
+   * @param stateRepository  - Interface for `S`tate management/persistence
+   * @param saga - An optional saga component of type `ISaga`<`E`, `C`>
+   */
+  constructor(
+    decider: IDecider<C, S, E>,
+    stateRepository: StateRepository<C, S>,
+    private readonly saga: ISaga<E, C>
+  ) {
+    super(decider, stateRepository);
+    this.react = saga.react;
+  }
+
+  /**
+   * Saga - react function
+   */
+  readonly react: (ar: E) => readonly C[];
+
+  /**
+   * An algorithm to compute new state based on the old state and the command being handled.
+   *
+   * @param state
+   * @param command
+   */
+  protected computeNewState(state: S, command: C): S {
+    const events = this.decide(command, state);
+    // eslint-disable-next-line functional/no-let
+    let newState = events.reduce(this.evolve, state);
+
+    if (typeof this.saga !== 'undefined') {
+      const saga = this.saga;
+      events
+        .flatMap((it) => saga.react(it))
+        .forEach((c) => (newState = this.computeNewState(newState, c)));
+    }
+    return newState;
   }
 }
 

@@ -64,8 +64,10 @@ behavior. `_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for
 We make a difference between input and output types, and we are more general in this case. We can always specialize down
 to the 3 generic parameters: `export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}`
 
+Notice that `Decider` implements an interface `IDecider` to communicate the contract.
+
 ```typescript
-export class _Decider<C, Si, So, Ei, Eo> {
+export class _Decider<C, Si, So, Ei, Eo> implements I_Decider<C, Si, So, Ei, Eo> {
     constructor(
       readonly decide: (c: C, s: Si) => readonly Eo[],
       readonly evolve: (s: Si, e: Ei) => So,
@@ -73,7 +75,8 @@ export class _Decider<C, Si, So, Ei, Eo> {
     ) {}
 }
 
-export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}
+export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
+export class Decider<C, S, E> extends _Decider<C, S, S, E, E> implements IDecider<C, S, E> {}
 ```
 
 Additionally, `initialState` of the Decider is introduced to gain more control over the initial state of the Decider.
@@ -119,15 +122,19 @@ It has three generic parameters `Si`, `So`, `E`, representing the type of the va
 We make a difference between input and output types, and we are more general in this case. We can always specialize down
 to the 2 generic parameters: `class View<S, E> extends _View<S, S, E> {}`
 
+Notice that `View` implements an interface `IView` to communicate the contract.
+
+
 ```typescript
-export class _View<Si, So, E> {
+export class _View<Si, So, E> implements I_View<Si, So, E> {
     constructor(
         readonly evolve: (s: Si, e: E) => So,
         readonly initialState: So
     ) {}
 }
 
-export class View<S, E> extends _View<S, S, E> {}
+export type IView<S, E> = I_View<S, S, E>;
+export class View<S, E> extends _View<S, S, E> implements IView<S, E> {}
 ```
 
 ![view image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/view.png)
@@ -157,8 +164,10 @@ It has two generic parameters `AR`, `A`, representing the type of the values tha
 - `AR` - Action Result
 - `A`  - Action
 
+Notice that `Saga` implements an interface `ISaga` to communicate the contract.
+
 ```typescript
-export class Saga<AR, A> {
+export class Saga<AR, A> implements ISaga<AR, A>{
     constructor(readonly react: (ar: AR) => readonly A[]) {}
 }
 ```

@@ -15,10 +15,31 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { View } from '../domain/view';
+import { IView } from '../domain/view';
 
 /**
- * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) as a result.
+ * Materialized view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
+ * Essentially, it represents the query/view side of the CQRS pattern.
+ *
+ * @typeParam S - Materialized IView state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IMaterializedView<S, E>
+  extends IView<S, E>,
+    ViewStateRepository<E, S> {
+  /**
+   * Handles the event of type `E`, and returns new persisted state of type `S`
+   *
+   * @param event Event of type `E` to be handled
+   * @return State of type `S`
+   */
+  handle(event: E): Promise<S>;
+}
+
+/**
+ * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
  * @typeParam S - Materialized View state of type `S`
@@ -26,16 +47,26 @@ import { View } from '../domain/view';
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class MaterializedView<S, E> {
+export class MaterializedView<S, E> implements IMaterializedView<S, E> {
   /**
    * @constructor Creates `MaterializedView`
-   * @param view - A view component of type `View`<`S`, `E`>
+   * @param view - A view component of type `IView`<`S`, `E`>
    * @param viewStateRepository - Interface for `S`tate management/persistence
    */
   constructor(
-    private readonly view: View<S, E>,
+    private readonly view: IView<S, E>,
     private readonly viewStateRepository: ViewStateRepository<E, S>
-  ) {}
+  ) {
+    this.evolve = this.view.evolve;
+    this.initialState = this.view.initialState;
+    this.fetchState = this.viewStateRepository.fetchState;
+    this.save = this.viewStateRepository.save;
+  }
+
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
+  readonly fetchState: (e: E) => Promise<S | null>;
+  readonly save: (s: S) => Promise<S>;
 
   /**
    * Handles the event of type `E`, and returns new persisted state of type `S`
@@ -44,12 +75,12 @@ export class MaterializedView<S, E> {
    * @return State of type `S`
    */
   async handle(event: E): Promise<S> {
-    const currentState = await this.viewStateRepository.fetchState(event);
-    const newState = this.view.evolve(
-      currentState ? currentState : this.view.initialState,
+    const currentState = await this.fetchState(event);
+    const newState = this.evolve(
+      currentState ? currentState : this.initialState,
       event
     );
-    return this.viewStateRepository.save(newState);
+    return this.save(newState);
   }
 }
 

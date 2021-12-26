@@ -11,9 +11,41 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression */
+/* eslint-disable functional/no-this-expression,functional/prefer-type-literal,functional/no-mixed-type, functional/no-class */
 
-/* eslint-disable functional/no-class */
+/**
+ * `I_View` represents the event handling algorithm,
+ * responsible for translating the events into denormalized state,
+ * which is more adequate for querying.
+ *
+ * @typeParam Si - input State
+ * @typeParam So - output State
+ * @typeParam E - Event
+ *
+ * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @param initialState - A starting point / An initial state of type `So`
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface I_View<Si, So, E> {
+  readonly evolve: (s: Si, e: E) => So;
+  readonly initialState: So;
+}
+
+/**
+ * `IView` represents the event handling algorithm,
+ * responsible for translating the events into denormalized state,
+ * which is more adequate for querying.
+ *
+ * @typeParam S - State
+ * @typeParam E - Event
+ *
+ * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @param initialState - A starting point / An initial state of type `So`
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export type IView<S, E> = I_View<S, S, E>;
 
 /**
  * `_View` is a datatype that represents the event handling algorithm,
@@ -29,7 +61,7 @@
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class _View<Si, So, E> {
+export class _View<Si, So, E> implements I_View<Si, So, E> {
   /**
    * @constructor - creates the `_View`
    * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
@@ -131,7 +163,8 @@ export class _View<Si, So, E> {
  * responsible for translating the events into denormalized state,
  * which is more adequate for querying.
  *
- * This is a specialized version of the `_View` with `Si=So=S`
+ * @typeParam S - State
+ * @typeParam E - Event
  *
  * ### Example
  * ```typescript
@@ -151,12 +184,9 @@ export class _View<Si, So, E> {
  * );
  * ```
  *
- * @typeParam S - State
- * @typeParam E - Event
- *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class View<S, E> extends _View<S, S, E> {}
+export class View<S, E> extends _View<S, S, E> implements IView<S, E> {}
 
 /**
  * Identity function

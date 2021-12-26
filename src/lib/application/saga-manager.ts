@@ -15,7 +15,21 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { Saga } from '../domain/saga';
+import { ISaga } from '../domain/saga';
+
+/**
+ * Saga manager interface - Stateless process orchestrator.
+ *
+ * It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
+ *
+ * @typeParam AR - Action Result of type `AR`
+ * @typeParam A - Action of type `A` that are going to be published downstream
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface ISagaManager<AR, A> extends ISaga<AR, A>, ActionPublisher<A> {
+  handle(actionResult: AR): Promise<readonly A[]>;
+}
 
 /**
  * Saga manager - Stateless process orchestrator.
@@ -27,16 +41,24 @@ import { Saga } from '../domain/saga';
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class SagaManager<AR, A> {
+export class SagaManager<AR, A> implements ISagaManager<AR, A> {
   /**
    *
-   * @param saga  - A saga component of type `Saga`<`AR`, `A`>
-   * @param actionPublisher - Interface for `A`ction publishing of type `ActionPublisher`<`A`>
+   * @param saga  - A saga component of type `ISaga`<`AR`, `A`>
+   * @param actionPublisher - Interface for `A`ction publishing of type `IActionPublisher`<`A`>
    */
   constructor(
-    private readonly saga: Saga<AR, A>,
+    private readonly saga: ISaga<AR, A>,
     private readonly actionPublisher: ActionPublisher<A>
-  ) {}
+  ) {
+    this.react = this.saga.react;
+    this.publish = this.actionPublisher.publish;
+    this.publishAll = this.actionPublisher.publishAll;
+  }
+
+  readonly react: (ar: AR) => readonly A[];
+  readonly publish: (a: A) => Promise<A>;
+  readonly publishAll: (aList: readonly A[]) => Promise<readonly A[]>;
 
   /**
    * Handles the action result of type `AR`
@@ -45,7 +67,7 @@ export class SagaManager<AR, A> {
    * @return list of Actions of type `A`
    */
   async handle(actionResult: AR): Promise<readonly A[]> {
-    return this.actionPublisher.publishAll(this.saga.react(actionResult));
+    return this.publishAll(this.react(actionResult));
   }
 }
 

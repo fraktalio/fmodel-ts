@@ -17,7 +17,11 @@ import test from 'ava';
 
 import { View } from '../domain/view';
 
-import { MaterializedView, ViewStateRepository } from './materialized-view';
+import {
+  IMaterializedView,
+  MaterializedView,
+  ViewStateRepository,
+} from './materialized-view';
 
 function isNumber(x: any): x is number {
   return typeof x === 'number';
@@ -78,12 +82,10 @@ const repository: ViewStateRepository<number, number> =
 const repository2: ViewStateRepository<string, string> =
   new ViewStateRepository2Impl();
 
-const materializedView: MaterializedView<number, number> = new MaterializedView<
-  number,
-  number
->(view, repository);
+const materializedView: IMaterializedView<number, number> =
+  new MaterializedView<number, number>(view, repository);
 
-const materializedView2: MaterializedView<string, string> =
+const materializedView2: IMaterializedView<string, string> =
   new MaterializedView<string, string>(view2, repository2);
 
 test('view-handle', async (t) => {
