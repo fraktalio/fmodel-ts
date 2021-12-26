@@ -15,10 +15,10 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { ISaga, Saga } from '../domain/saga';
+import { ISaga } from '../domain/saga';
 
 /**
- * Saga manager - Stateless process orchestrator.
+ * Saga manager interface - Stateless process orchestrator.
  *
  * It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
  *
@@ -44,11 +44,11 @@ export interface ISagaManager<AR, A> extends ISaga<AR, A>, ActionPublisher<A> {
 export class SagaManager<AR, A> implements ISagaManager<AR, A> {
   /**
    *
-   * @param saga  - A saga component of type `Saga`<`AR`, `A`>
-   * @param actionPublisher - Interface for `A`ction publishing of type `ActionPublisher`<`A`>
+   * @param saga  - A saga component of type `ISaga`<`AR`, `A`>
+   * @param actionPublisher - Interface for `A`ction publishing of type `IActionPublisher`<`A`>
    */
   constructor(
-    private readonly saga: Saga<AR, A>,
+    private readonly saga: ISaga<AR, A>,
     private readonly actionPublisher: ActionPublisher<A>
   ) {
     this.react = this.saga.react;

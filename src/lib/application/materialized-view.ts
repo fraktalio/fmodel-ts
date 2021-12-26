@@ -15,10 +15,10 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { IView, View } from '../domain/view';
+import { IView } from '../domain/view';
 
 /**
- * Materialized view is using/delegating a `IView` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
+ * Materialized view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
  * @typeParam S - Materialized IView state of type `S`
@@ -39,7 +39,7 @@ export interface IMaterializedView<S, E>
 }
 
 /**
- * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) as a result.
+ * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
  * @typeParam S - Materialized View state of type `S`
@@ -50,11 +50,11 @@ export interface IMaterializedView<S, E>
 export class MaterializedView<S, E> implements IMaterializedView<S, E> {
   /**
    * @constructor Creates `MaterializedView`
-   * @param view - A view component of type `View`<`S`, `E`>
+   * @param view - A view component of type `IView`<`S`, `E`>
    * @param viewStateRepository - Interface for `S`tate management/persistence
    */
   constructor(
-    private readonly view: View<S, E>,
+    private readonly view: IView<S, E>,
     private readonly viewStateRepository: ViewStateRepository<E, S>
   ) {
     this.evolve = this.view.evolve;

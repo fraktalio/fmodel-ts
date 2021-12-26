@@ -19,7 +19,7 @@ import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
 
 /**
- * Event sourcing aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * Event sourcing aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
  * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
  *
  * Produced events are then stored via `EventRepository.save` function.
@@ -37,7 +37,7 @@ export interface IEventSourcingAggregate<C, S, E>
 }
 
 /**
- * Event sourcing orchestrating aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * Event sourcing orchestrating aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
  * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
  *
  * If the `decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingAggregate.saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
@@ -55,7 +55,7 @@ export interface IEventSourcingOrchestratingAggregate<C, S, E>
     ISaga<E, C> {}
 
 /**
- * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
  * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingAggregate.decider` which can produce new event(s) as a result.
  *
  *
@@ -73,7 +73,7 @@ export class EventSourcingAggregate<C, S, E>
   /**
    * @constructor Creates `EventSourcingAggregate`
    *
-   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
    * @param eventRepository - Interface for `E`vent management/persistence
    */
   constructor(
@@ -118,7 +118,7 @@ export class EventSourcingAggregate<C, S, E>
 }
 
 /**
- * Event sourcing orchestrating aggregate is using/delegating a `EventSourcingOrchestratingAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce events.
+ * Event sourcing orchestrating aggregate is using/delegating a `EventSourcingOrchestratingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
  * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingOrchestratingAggregate.decider` which can produce new event(s) as a result.
  *
  * If the `EventSourcingOrchestratingAggregate.decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingAggregate.saga` could be used to react on new events and send new commands to the `EventSourcingOrchestratingAggregate.decider` recursively, in one transaction.
@@ -138,7 +138,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
   /**
    * @constructor Creates `EventSourcingOrchestratingAggregate`
    *
-   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
    * @param eventRepository - Interface for `E`vent management/persistence
    * @param saga - A saga component of type `Saga`<`E`, `C`>
    */

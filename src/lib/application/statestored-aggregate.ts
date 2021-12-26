@@ -15,11 +15,11 @@
 
 /* eslint-disable functional/prefer-type-literal */
 
-import { Decider, IDecider } from '../domain/decider';
-import { ISaga, Saga } from '../domain/saga';
+import { IDecider } from '../domain/decider';
+import { ISaga } from '../domain/saga';
 
 /**
- * State stored aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * State stored aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
  * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  *
  * New state is then stored via `StateRepository.save` function.
@@ -37,9 +37,9 @@ export interface IStateStoredAggregate<C, S, E>
 }
 
 /**
- * State stored aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * State stored aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
  * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
- * If the `decider` is combined out of many deciders via `combine` function, an optional `StateStoredAggregate.saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
  *
  * New state is then stored via `StateRepository.save` function.
  *
@@ -54,8 +54,8 @@ export interface IStateStoredOrchestratingAggregate<C, S, E>
     ISaga<E, C> {}
 
 /**
- * State stored aggregate is using/delegating a `StateStoredAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `StateStoredAggregate.decider` which can produce new state as a result.
+ * State stored aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  *
  * New state is then stored via `StateRepository.save` function.
  *
@@ -70,11 +70,11 @@ export class StateStoredAggregate<C, S, E>
 {
   /**
    * @constructor Creates `StateStoredAggregate`
-   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
    * @param stateRepository  - Interface for `S`tate management/persistence
    */
   constructor(
-    private readonly decider: Decider<C, S, E>,
+    private readonly decider: IDecider<C, S, E>,
     private readonly stateRepository: StateRepository<C, S>
   ) {
     this.decide = this.decider.decide;
@@ -119,9 +119,9 @@ export class StateStoredAggregate<C, S, E>
 }
 
 /**
- * State stored aggregate is using/delegating a `StateStoredAggregate.decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `StateStoredAggregate.decider` which can produce new state as a result.
- * If the `StateStoredAggregate.decider` is combined out of many deciders via `combine` function, an optional `StateStoredAggregate.saga` could be used to react on new events and send new commands to the `StateStoredAggregate.decider` recursively, in one transaction.
+ * State stored aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
  *
  * New state is then stored via `StateRepository.save` function.
  *
@@ -137,14 +137,14 @@ export class StateStoredOrchestratingAggregate<C, S, E>
 {
   /**
    * @constructor Creates `StateStoredAggregate`
-   * @param decider - A decider component of type `Decider`<`C`, `S`, `E`>.
+   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
    * @param stateRepository  - Interface for `S`tate management/persistence
-   * @param saga - An optional saga component of type `Saga`<`E`, `C`>
+   * @param saga - An optional saga component of type `ISaga`<`E`, `C`>
    */
   constructor(
-    decider: Decider<C, S, E>,
+    decider: IDecider<C, S, E>,
     stateRepository: StateRepository<C, S>,
-    private readonly saga: Saga<E, C>
+    private readonly saga: ISaga<E, C>
   ) {
     super(decider, stateRepository);
     this.react = saga.react;
