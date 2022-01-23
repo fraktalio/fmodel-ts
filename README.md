@@ -189,6 +189,9 @@ npm i @fraktalio/fmodel-ts
 ```
 > Available on [https://www.npmjs.com/package/@fraktalio/fmodel-ts](https://www.npmjs.com/package/@fraktalio/fmodel-ts)
 
+## Examples
+Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
+
 ## Credits
 
 Special credits to `Jérémie Chassaing` for sharing his [research](https://www.youtube.com/watch?v=kgYGMVDHQHs)
