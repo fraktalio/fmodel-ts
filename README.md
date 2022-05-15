@@ -62,7 +62,9 @@ behavior. `_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for
 - `Eo` - output Event
 
 We make a difference between input and output types, and we are more general in this case. We can always specialize down
-to the 3 generic parameters: `export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}`
+to the 3 generic parameters: `export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}`. 
+
+**The three parameter(s) `Decider<C, S, E>` is the type you would like to use as an API, rather than using `_Decider<C, S, S, E, E>`.  Nevertheless, you have options.**
 
 Notice that `Decider` implements an interface `IDecider` to communicate the contract.
 
@@ -120,7 +122,9 @@ It has three generic parameters `Si`, `So`, `E`, representing the type of the va
 - `E`  - Event
 
 We make a difference between input and output types, and we are more general in this case. We can always specialize down
-to the 2 generic parameters: `class View<S, E> extends _View<S, S, E> {}`
+to the 2 generic parameters: `class View<S, E> extends _View<S, S, E> {}`.
+
+**The two parameter(s) `View<S, E>` is the type you would like to use as an API, rather than using `_View<S, S, E>`.  Nevertheless, you have options.**
 
 Notice that `View` implements an interface `IView` to communicate the contract.
 
@@ -191,6 +195,12 @@ npm i @fraktalio/fmodel-ts
 
 ## Examples
 Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
+
+## Resources
+
+- [The Blog - Domain modeling](https://fraktalio.com/blog/)
+- [A Kotlin multiplatform version of the library](https://github.com/fraktalio/fmodel)
+- [Event Modeling - What is it?](https://eventmodeling.org/posts/what-is-event-modeling/)
 
 ## Credits
 
