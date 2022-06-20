@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig",
   "compilerOptions": {
-    "target": "esnext",
+    "target": "ES2021",
     "outDir": "build/module",
     "module": "esnext"
   },
