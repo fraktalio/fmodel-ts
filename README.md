@@ -6,6 +6,8 @@ When you’re developing an information system to automate the activities of the
 The abstractions that you design, the behaviors that you implement, and the UI interactions that you build all reflect
 the business — together, they constitute the model of the domain.
 
+![event-modeling](.assets/event-modeling.png)
+
 ## `IOR<Library, Inspiration>`
 
 This project can be used as a library, or as an inspiration, or both. It provides just enough tactical Domain-Driven
