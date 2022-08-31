@@ -156,24 +156,41 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
 
   /**
    * An algorithm to compute new events based on the old events and the command being handled.
+   * It returns all the events, including the events created by handling commands which are triggered by Saga - orchestration included.
    *
    * @param events
    * @param command
    */
-  protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
+  protected async computeNewEventsByOrchestrating(
+    events: readonly E[],
+    command: C
+  ): Promise<readonly E[]> {
     // eslint-disable-next-line functional/no-let
     let resultingEvents = super.computeNewEvents(events, command);
-
-    resultingEvents
-      .flatMap((it) => this.react(it))
-      .forEach(
-        (c) =>
-          (resultingEvents = resultingEvents.concat(
-            this.computeNewEvents(events.concat(resultingEvents), c)
-          ))
-      );
-
+    await asyncForEach(
+      resultingEvents.flatMap((it) => this.react(it)),
+      async (c) => {
+        const newEvents = this.computeNewEventsByOrchestrating(
+          (await this.fetchEvents(c)).concat(resultingEvents),
+          c
+        );
+        resultingEvents = resultingEvents.concat(await newEvents);
+      }
+    );
     return resultingEvents;
+  }
+
+  /**
+   * Handles the command of type `C`, and returns new persisted events.
+   *
+   * @param command - Command of type `C`
+   * @return list of persisted events ot type `E`
+   */
+  async handle(command: C): Promise<readonly E[]> {
+    const currentEvents = await this.fetchEvents(command);
+    return this.saveAll(
+      await this.computeNewEventsByOrchestrating(currentEvents, command)
+    );
   }
 }
 
@@ -210,4 +227,14 @@ export interface EventRepository<C, E> {
    * @return newly saved list of Events of type `E`
    */
   readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
+}
+
+async function asyncForEach(
+  array: readonly any[],
+  callback: (arg0: any, arg1: number, arg2: any) => any
+) {
+  // eslint-disable-next-line functional/no-loop-statement,functional/no-let
+  for (let index = 0; index < array.length; index++) {
+    await callback(array[index], index, array);
+  }
 }
