@@ -33,7 +33,25 @@ import { ISaga } from '../domain/saga';
 export interface IEventSourcingAggregate<C, S, E>
   extends IDecider<C, S, E>,
     EventRepository<C, E> {
+  /**
+   * Handles the command of type `C`, and returns new persisted events.
+   *
+   * @param command - Command of type `C`
+   * @return list of persisted events ot type `E`
+   */
   readonly handle: (command: C) => Promise<readonly E[]>;
+}
+
+export interface IEventSourcingLockingAggregate<C, S, E, V>
+  extends IDecider<C, S, E>,
+    EventLockingRepository<C, E, V> {
+  /**
+   * Handles the command of type `C`, and returns new persisted list of pairs of event and its version.
+   *
+   * @param command - Command of type `C`
+   * @return list of persisted events ot type [`E, `V`]
+   */
+  readonly handle: (command: C) => Promise<readonly (readonly [E, V])[]>;
 }
 
 /**
@@ -54,6 +72,65 @@ export interface IEventSourcingOrchestratingAggregate<C, S, E>
   extends IEventSourcingAggregate<C, S, E>,
     ISaga<E, C> {}
 
+export interface IEventSourcingOrchestratingLockingAggregate<C, S, E, V>
+  extends IEventSourcingLockingAggregate<C, S, E, V>,
+    ISaga<E, C> {}
+
+/**
+ * An abstract algorithm to compute new events based on the old events and the command being handled.
+ */
+export abstract class EventComputation<C, S, E> implements IDecider<C, S, E> {
+  protected constructor(decider: IDecider<C, S, E>) {
+    this.decide = decider.decide;
+    this.evolve = decider.evolve;
+    this.initialState = decider.initialState;
+  }
+  readonly decide: (c: C, s: S) => readonly E[];
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
+
+  protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
+    const currentState = events.reduce(this.evolve, this.initialState);
+    return this.decide(command, currentState);
+  }
+}
+
+/**
+ * An abstract algorithm to compute new events based on the old events and the command being handled.
+ * It returns all the events, including the events created by handling commands which are triggered by Saga - orchestration included.
+ */
+export abstract class EventOrchestratingComputation<C, S, E>
+  extends EventComputation<C, S, E>
+  implements IDecider<C, S, E>, ISaga<E, C>
+{
+  protected constructor(decider: IDecider<C, S, E>, saga: ISaga<E, C>) {
+    super(decider);
+    this.react = saga.react;
+  }
+  readonly react: (ar: E) => readonly C[];
+
+  protected async computeNewEventsByOrchestrating(
+    events: readonly E[],
+    command: C,
+    fetchEvents: (c: C) => Promise<readonly E[]>
+  ): Promise<readonly E[]> {
+    // eslint-disable-next-line functional/no-let
+    let resultingEvents = super.computeNewEvents(events, command);
+    await asyncForEach(
+      resultingEvents.flatMap((it) => this.react(it)),
+      async (c) => {
+        const newEvents = this.computeNewEventsByOrchestrating(
+          (await fetchEvents(c)).concat(resultingEvents),
+          c,
+          fetchEvents
+        );
+        resultingEvents = resultingEvents.concat(await newEvents);
+      }
+    );
+    return resultingEvents;
+  }
+}
+
 /**
  * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
  * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingAggregate.decider` which can produce new event(s) as a result.
@@ -68,53 +145,91 @@ export interface IEventSourcingOrchestratingAggregate<C, S, E>
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class EventSourcingAggregate<C, S, E>
+  extends EventComputation<C, S, E>
   implements IEventSourcingAggregate<C, S, E>
 {
-  /**
-   * @constructor Creates `EventSourcingAggregate`
-   *
-   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
-   * @param eventRepository - Interface for `E`vent management/persistence
-   */
   constructor(
-    private readonly decider: IDecider<C, S, E>,
-    private readonly eventRepository: EventRepository<C, E>
+    decider: IDecider<C, S, E>,
+    eventRepository: EventRepository<C, E>
   ) {
-    this.decide = this.decider.decide;
-    this.evolve = this.decider.evolve;
-    this.initialState = this.decider.initialState;
-    this.fetchEvents = this.eventRepository.fetchEvents;
-    this.save = this.eventRepository.save;
-    this.saveAll = this.eventRepository.saveAll;
+    super(decider);
+    this.fetchEvents = eventRepository.fetchEvents;
+    this.save = eventRepository.save;
+    this.saveAll = eventRepository.saveAll;
   }
 
-  readonly decide: (c: C, s: S) => readonly E[];
-  readonly evolve: (s: S, e: E) => S;
-  readonly initialState: S;
   readonly fetchEvents: (c: C) => Promise<readonly E[]>;
   readonly save: (e: E) => Promise<E>;
   readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 
-  /**
-   * An algorithm to compute new events based on the old events and the command being handled.
-   *
-   * @param events
-   * @param command
-   */
-  protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
-    const currentState = events.reduce(this.evolve, this.initialState);
-    return this.decide(command, currentState);
-  }
-
-  /**
-   * Handles the command of type `C`, and returns new persisted events.
-   *
-   * @param command - Command of type `C`
-   * @return list of persisted events ot type `E`
-   */
   async handle(command: C): Promise<readonly E[]> {
     const currentEvents = await this.fetchEvents(command);
     return this.saveAll(this.computeNewEvents(currentEvents, command));
+  }
+}
+
+/**
+ * Event sourcing locking aggregate is using/delegating a `EventSourcingLockingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventLockingRepository.fetchEvents` function, and then delegate the command to the `EventSourcingLockingAggregate.decider` which can produce new event(s) as a result.
+ *
+ *
+ * Produced events are then stored via `EventLockingRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ * @typeParam E - Version
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class EventSourcingLockingAggregate<C, S, E, V>
+  extends EventComputation<C, S, E>
+  implements IEventSourcingLockingAggregate<C, S, E, V>
+{
+  constructor(
+    decider: IDecider<C, S, E>,
+    eventRepository: EventLockingRepository<C, E, V>
+  ) {
+    super(decider);
+    this.fetchEvents = eventRepository.fetchEvents;
+    this.save = eventRepository.save;
+    this.saveAll = eventRepository.saveAll;
+    this.latestVersionProvider = eventRepository.latestVersionProvider;
+    this.saveByLatestVersionProvided =
+      eventRepository.saveByLatestVersionProvided;
+    this.saveAllByLatestVersionProvided =
+      eventRepository.saveAllByLatestVersionProvided;
+  }
+
+  readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
+  readonly save: (
+    e: E,
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly [E, V]>;
+  readonly saveAll: (
+    eList: readonly E[],
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly (readonly [E, V])[]>;
+  readonly saveByLatestVersionProvided: (
+    e: E,
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly [E, V]>;
+  readonly saveAllByLatestVersionProvided: (
+    eList: readonly E[],
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly (readonly [E, V])[]>;
+  readonly latestVersionProvider: LatestVersionProvider<E, V>;
+
+  async handle(command: C): Promise<readonly (readonly [E, V])[]> {
+    const currentEvents = await this.fetchEvents(command);
+
+    return this.saveAll(
+      this.computeNewEvents(
+        currentEvents.map((a) => a[0]),
+        command
+      ),
+      currentEvents[currentEvents.length - 1]
+    );
   }
 }
 
@@ -133,63 +248,32 @@ export class EventSourcingAggregate<C, S, E>
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class EventSourcingOrchestratingAggregate<C, S, E>
-  extends EventSourcingAggregate<C, S, E>
+  extends EventOrchestratingComputation<C, S, E>
   implements IEventSourcingOrchestratingAggregate<C, S, E>
 {
-  /**
-   * @constructor Creates `EventSourcingOrchestratingAggregate`
-   *
-   * @param decider - A decider component of type `IDecider`<`C`, `S`, `E`>.
-   * @param eventRepository - Interface for `E`vent management/persistence
-   * @param saga - A saga component of type `Saga`<`E`, `C`>
-   */
   constructor(
     decider: IDecider<C, S, E>,
     eventRepository: EventRepository<C, E>,
-    private readonly saga: ISaga<E, C>
+    saga: ISaga<E, C>
   ) {
-    super(decider, eventRepository);
-    this.react = this.saga.react;
+    super(decider, saga);
+    this.fetchEvents = eventRepository.fetchEvents;
+    this.save = eventRepository.save;
+    this.saveAll = eventRepository.saveAll;
   }
 
-  readonly react: (ar: E) => readonly C[];
+  readonly fetchEvents: (c: C) => Promise<readonly E[]>;
+  readonly save: (e: E) => Promise<E>;
+  readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 
-  /**
-   * An algorithm to compute new events based on the old events and the command being handled.
-   * It returns all the events, including the events created by handling commands which are triggered by Saga - orchestration included.
-   *
-   * @param events
-   * @param command
-   */
-  protected async computeNewEventsByOrchestrating(
-    events: readonly E[],
-    command: C
-  ): Promise<readonly E[]> {
-    // eslint-disable-next-line functional/no-let
-    let resultingEvents = super.computeNewEvents(events, command);
-    await asyncForEach(
-      resultingEvents.flatMap((it) => this.react(it)),
-      async (c) => {
-        const newEvents = this.computeNewEventsByOrchestrating(
-          (await this.fetchEvents(c)).concat(resultingEvents),
-          c
-        );
-        resultingEvents = resultingEvents.concat(await newEvents);
-      }
-    );
-    return resultingEvents;
-  }
-
-  /**
-   * Handles the command of type `C`, and returns new persisted events.
-   *
-   * @param command - Command of type `C`
-   * @return list of persisted events ot type `E`
-   */
   async handle(command: C): Promise<readonly E[]> {
     const currentEvents = await this.fetchEvents(command);
     return this.saveAll(
-      await this.computeNewEventsByOrchestrating(currentEvents, command)
+      await this.computeNewEventsByOrchestrating(
+        currentEvents,
+        command,
+        this.fetchEvents
+      )
     );
   }
 }
@@ -227,6 +311,80 @@ export interface EventRepository<C, E> {
    * @return newly saved list of Events of type `E`
    */
   readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
+}
+
+export type LatestVersionProvider<E, V> = (e: E) => readonly [E, V];
+
+/**
+ * Event Locking repository interface
+ *
+ * @param C - Command
+ * @param E - Event
+ * @param V - Version
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface EventLockingRepository<C, E, V> {
+  /**
+   * Fetch events
+   *
+   * @param c - Command of type `C`
+   *
+   * @return list of pairs of Event and Version
+   */
+  readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
+  /**
+   * Save event
+   *
+   * @param e - Event of type `E`
+   * @param latestVersion - Latest Event in this stream and its Version
+   * @return  a pair of newly saved Event of type `E` and its Version of type `V`
+   */
+  readonly save: (
+    e: E,
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly [E, V]>;
+
+  /**
+   * Save events
+   *
+   * @param eList - list of Events of type `E`
+   * @param latestVersion - Latest Event in this stream and its Version
+   * @return  a list of pairs of newly saved Event of type `E` and its Version of type `V`
+   */
+  readonly saveAll: (
+    eList: readonly E[],
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly (readonly [E, V])[]>;
+
+  /**
+   * The latest event stream version provider
+   */
+  readonly latestVersionProvider: LatestVersionProvider<E, V>;
+
+  /**
+   * Save event
+   *
+   * @param e - Event of type `E`
+   * @param latestVersionProvider - A provider for the Latest Event in this stream and its Version
+   * @return  a pair of newly saved Event of type `E` and its Version of type `V`
+   */
+  readonly saveByLatestVersionProvided: (
+    e: E,
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly [E, V]>;
+
+  /**
+   * Save events
+   *
+   * @param eList - list of Events of type `E`
+   * @param latestVersionProvider - A provider for the Latest Event in this stream and its Version
+   * @return  a list of pairs of newly saved Event of type `E` and its Version of type `V`
+   */
+  readonly saveAllByLatestVersionProvided: (
+    eList: readonly E[],
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly (readonly [E, V])[]>;
 }
 
 async function asyncForEach(
