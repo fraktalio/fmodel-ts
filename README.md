@@ -6,7 +6,7 @@ When you’re developing an information system to automate the activities of the
 The abstractions that you design, the behaviors that you implement, and the UI interactions that you build all reflect
 the business — together, they constitute the model of the domain.
 
-![event-modeling](.assets/event-modeling.png)
+![event-modeling](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/event-modeling.png)
 
 ## `IOR<Library, Inspiration>`
 
@@ -109,7 +109,7 @@ New state is then stored via `StateRepository.save` function.
 
 *The logic is orchestrated on the application layer. The components/functions are composed in different ways to support variety of requirements.*
 
-![aggregates-application-layer](.assets/aggregates.png)
+![aggregates-application-layer](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/aggregates.png)
 
 ## View
 
@@ -159,7 +159,7 @@ is then stored via `ViewStateRepository.save` function.
 
 *The logic is orchestrated on the application layer. The components/functions are composed in different ways to support variety of requirements.*
 
-![materialized-views-application-layer](.assets/mviews.png)
+![materialized-views-application-layer](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/mviews.png)
 
 ## Saga
 
