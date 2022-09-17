@@ -42,6 +42,19 @@ export interface IEventSourcingAggregate<C, S, E>
   readonly handle: (command: C) => Promise<readonly E[]>;
 }
 
+/**
+ * Event sourcing locking aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventLockingRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
+ *
+ * Produced events are then stored via `EventLockingRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ * @typeParam V - Version
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
 export interface IEventSourcingLockingAggregate<C, S, E, V>
   extends IDecider<C, S, E>,
     EventLockingRepository<C, E, V> {
@@ -72,6 +85,21 @@ export interface IEventSourcingOrchestratingAggregate<C, S, E>
   extends IEventSourcingAggregate<C, S, E>,
     ISaga<E, C> {}
 
+/**
+ * Event sourcing orchestrating locking aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventLockingRepository.fetchEvents` function, and then delegate the command to the `decider` which can produce new event(s) as a result.
+ *
+ * If the `decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingLockingAggregate.saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
+ *
+ * Produced events are then stored via `EventLockingRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ * @typeParam V - Version
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
 export interface IEventSourcingOrchestratingLockingAggregate<C, S, E, V>
   extends IEventSourcingLockingAggregate<C, S, E, V>,
     ISaga<E, C> {}
@@ -274,6 +302,73 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
         command,
         this.fetchEvents
       )
+    );
+  }
+}
+
+/**
+ * Event sourcing orchestrating locking aggregate is using/delegating a `EventSourcingOrchestratingLockingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventLockingRepository.fetchEvents` function, and then delegate the command to the `EventSourcingOrchestratingLockingAggregate.decider` which can produce new event(s) as a result.
+ *
+ * If the `EventSourcingOrchestratingLockingAggregate.decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingLockingAggregate.saga` could be used to react on new events and send new commands to the `EventSourcingOrchestratingLockingAggregate.decider` recursively, in one transaction.
+ *
+ * Produced events are then stored via `EventLockingRepository.save` function.
+ *
+ * @typeParam C - Commands of type `C` that this aggregate can handle
+ * @typeParam S - Aggregate state of type `S`
+ * @typeParam E - Events of type `E` that this aggregate can publish
+ * @typeParam V - Version
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class EventSourcingOrchestratingLockingAggregate<C, S, E, V>
+  extends EventOrchestratingComputation<C, S, E>
+  implements IEventSourcingOrchestratingLockingAggregate<C, S, E, V>
+{
+  constructor(
+    decider: IDecider<C, S, E>,
+    eventRepository: EventLockingRepository<C, E, V>,
+    saga: ISaga<E, C>
+  ) {
+    super(decider, saga);
+    this.fetchEvents = eventRepository.fetchEvents;
+    this.save = eventRepository.save;
+    this.saveAll = eventRepository.saveAll;
+    this.latestVersionProvider = eventRepository.latestVersionProvider;
+    this.saveByLatestVersionProvided =
+      eventRepository.saveByLatestVersionProvided;
+    this.saveAllByLatestVersionProvided =
+      eventRepository.saveAllByLatestVersionProvided;
+  }
+
+  readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
+  readonly save: (
+    e: E,
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly [E, V]>;
+  readonly saveAll: (
+    eList: readonly E[],
+    latestVersion: readonly [E, V] | null
+  ) => Promise<readonly (readonly [E, V])[]>;
+  readonly saveByLatestVersionProvided: (
+    e: E,
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly [E, V]>;
+  readonly saveAllByLatestVersionProvided: (
+    eList: readonly E[],
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ) => Promise<readonly (readonly [E, V])[]>;
+  readonly latestVersionProvider: LatestVersionProvider<E, V>;
+
+  async handle(command: C): Promise<readonly (readonly [E, V])[]> {
+    const currentEvents = await this.fetchEvents(command);
+    return this.saveAllByLatestVersionProvided(
+      await this.computeNewEventsByOrchestrating(
+        currentEvents.map((a) => a[0]),
+        command,
+        async (c: C) => (await this.fetchEvents(c)).map((it) => it[0])
+      ),
+      this.latestVersionProvider
     );
   }
 }
