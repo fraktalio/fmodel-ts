@@ -22,9 +22,12 @@ import { Saga } from '../domain/saga';
 
 import {
   IStateStoredAggregate,
+  IStateStoredLockingAggregate,
   IStateStoredOrchestratingAggregate,
+  StateLockingRepository,
   StateRepository,
   StateStoredAggregate,
+  StateStoredLockingAggregate,
   StateStoredOrchestratingAggregate,
 } from './statestored-aggregate';
 
@@ -149,6 +152,8 @@ let storage: number | null = null;
 // eslint-disable-next-line functional/no-let
 let storage2: number | null = null;
 // eslint-disable-next-line functional/no-let
+let lockingStorage2: readonly [number | null, number | null] = [null, null];
+// eslint-disable-next-line functional/no-let
 let storage3: readonly [number, number] | null = null;
 
 class StateRepositoryImpl implements StateRepository<OddNumberCmd, number> {
@@ -169,6 +174,22 @@ class StateRepositoryImpl2 implements StateRepository<EvenNumberCmd, number> {
   async save(s: number): Promise<number> {
     storage2 = s;
     return s;
+  }
+}
+
+class StateLockingRepositoryImpl2
+  implements StateLockingRepository<EvenNumberCmd, number, number>
+{
+  async fetchState(
+    _c: EvenNumberCmd
+  ): Promise<readonly [number | null, number | null]> {
+    return lockingStorage2;
+  }
+
+  async save(s: number, v: number | null): Promise<readonly [number, number]> {
+    lockingStorage2 = [s, v];
+    if (v == null) return [s, 1];
+    else return [s, v + 1];
   }
 }
 
@@ -194,6 +215,12 @@ const repository: StateRepository<OddNumberCmd, number> =
 const repository2: StateRepository<EvenNumberCmd, number> =
   new StateRepositoryImpl2();
 
+const lockingRepository2: StateLockingRepository<
+  EvenNumberCmd,
+  number,
+  number
+> = new StateLockingRepositoryImpl2();
+
 const repository3: StateRepository<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number]
@@ -212,6 +239,16 @@ const aggregate2: IStateStoredAggregate<EvenNumberCmd, number, number> =
     repository2
   );
 
+const lockingAggregate2: IStateStoredLockingAggregate<
+  EvenNumberCmd,
+  number,
+  number,
+  number
+> = new StateStoredLockingAggregate<EvenNumberCmd, number, number, number>(
+  decider2,
+  lockingRepository2
+);
+
 const aggregate3: IStateStoredOrchestratingAggregate<
   EvenNumberCmd | OddNumberCmd,
   readonly [number, number],
@@ -228,6 +265,10 @@ test('aggregate-handle', async (t) => {
 
 test('aggregate-handle2', async (t) => {
   t.deepEqual(await aggregate2.handle(new AddEvenNumberCmd(2)), 2);
+});
+
+test('aggregate-handle2-locking', async (t) => {
+  t.deepEqual(await lockingAggregate2.handle(new AddEvenNumberCmd(2)), [2, 1]);
 });
 
 test('aggregate-handle4', async (t) => {
