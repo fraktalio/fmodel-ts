@@ -212,8 +212,6 @@ export class MaterializedLockingDeduplicationView<S, E, EV, SV>
 /**
  * View State repository interface
  *
- * Used by [[MaterializedView]]
- *
  * @param E - Event
  * @param S - State
  *
@@ -238,13 +236,61 @@ export interface ViewStateRepository<E, S> {
   readonly save: (s: S) => Promise<S>;
 }
 
+/**
+ * View State Locking repository interface
+ *
+ * @param E - Event
+ * @param S - State
+ * @param V - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
 export interface ViewStateLockingRepository<E, S, V> {
+  /**
+   * Fetch state
+   *
+   * @param e - Event of type `E`
+   *
+   * @return current state of type [`S` , `V`]
+   */
   readonly fetchState: (e: E) => Promise<readonly [S | null, V | null]>;
+  /**
+   * Save state
+   *
+   * @param s - State of type `S`
+   * @param currentStateVersion - State version of type `V | null`
+   * @return newly saved State of type [`S`, `V`]
+   */
   readonly save: (s: S, currentStateVersion: V | null) => readonly [S, V];
 }
 
+/**
+ * View State Locking and Deduplication repository interface
+ *
+ * @param E - Event
+ * @param S - State
+ * @param EV - Version of the event
+ * @param SV - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
 export interface ViewStateLockingDeduplicationRepository<E, S, EV, SV> {
+  /**
+   * Fetch state
+   *
+   * @param e - Event of type `E`
+   *
+   * @return current state of type [`S` , `SV`]
+   */
   readonly fetchState: (e: E) => Promise<readonly [S | null, SV | null]>;
+  /**
+   * Save state
+   *
+   * @param s - State of type `S`
+   * @param eventVersion - Event version of type `EV`
+   * @param currentStateVersion - State version of type `SV | null`
+   * @return newly saved State of type [`S`, `V`]
+   */
   readonly save: (
     s: S,
     eventVersion: EV,
