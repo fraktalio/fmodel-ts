@@ -107,6 +107,10 @@ New state is then stored via `StateRepository.save` function.
 
 ![state storedaggregate](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/ss-aggregate.png)
 
+*The logic is orchestrated on the application layer. The components/functions are composed in different ways to support variety of requirements.*
+
+![aggregates-application-layer](.assets/aggregates.png)
+
 ## View
 
 `_View`  is a datatype that represents the event handling algorithm, responsible for translating the events into
@@ -152,6 +156,10 @@ result. Essentially, it represents the query/view side of the CQRS pattern. It b
 
 In order to handle the event, materialized view needs to fetch the current state via `ViewStateRepository.fetchState` function first, and then delegate the event to the view, which can produce new state as a result. New state
 is then stored via `ViewStateRepository.save` function.
+
+*The logic is orchestrated on the application layer. The components/functions are composed in different ways to support variety of requirements.*
+
+![materialized-views-application-layer](.assets/mviews.png)
 
 ## Saga
 

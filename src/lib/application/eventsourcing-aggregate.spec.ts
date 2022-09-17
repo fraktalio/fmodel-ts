@@ -21,11 +21,15 @@ import { Decider } from '../domain/decider';
 import { Saga } from '../domain/saga';
 
 import {
+  EventLockingRepository,
   EventRepository,
   EventSourcingAggregate,
+  EventSourcingLockingAggregate,
   EventSourcingOrchestratingAggregate,
   IEventSourcingAggregate,
+  IEventSourcingLockingAggregate,
   IEventSourcingOrchestratingAggregate,
+  LatestVersionProvider,
 } from './eventsourcing-aggregate';
 
 // ################################
@@ -171,6 +175,7 @@ const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
 
 const storage: readonly OddNumberEvt[] = [];
 const storage2: readonly EvenNumberEvt[] = [];
+const lockingStorage2: readonly (readonly [EvenNumberEvt, number])[] = [];
 const storage3: readonly (OddNumberEvt | EvenNumberEvt)[] = [];
 
 class EventRepositoryImpl
@@ -213,6 +218,74 @@ class EventRepositoryImpl2
   }
 }
 
+class EventRepositoryLockingImpl2
+  implements EventLockingRepository<EvenNumberCmd, EvenNumberEvt, number>
+{
+  async fetchEvents(
+    _c: EvenNumberCmd
+  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
+    return lockingStorage2;
+  }
+
+  async save(
+    e: EvenNumberEvt,
+    latestVersion: readonly [EvenNumberEvt, number] | null
+  ): Promise<readonly [EvenNumberEvt, number]> {
+    // eslint-disable-next-line functional/no-let
+    let version;
+    if (latestVersion) {
+      version = latestVersion[1];
+    } else version = 0;
+
+    lockingStorage2.concat([e, version + 1]);
+    return [e, version + 1];
+  }
+
+  async saveAll(
+    eList: readonly EvenNumberEvt[],
+    latestVersion: readonly [EvenNumberEvt, number] | null
+  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
+    // eslint-disable-next-line functional/no-let
+    let version: number;
+    if (latestVersion) {
+      version = latestVersion[1];
+    } else version = 0;
+
+    const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
+      eList.map((e, index) => [e, version + index + 1]);
+    lockingStorage2.concat(savedEvents);
+    return savedEvents;
+  }
+
+  readonly latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number> =
+    (_: EvenNumberEvt) => lockingStorage2[lockingStorage2.length - 1];
+
+  async saveByLatestVersionProvided(
+    e: EvenNumberEvt,
+    latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
+  ): Promise<readonly [EvenNumberEvt, number]> {
+    const latestVersion = latestVersionProvider(e);
+    // eslint-disable-next-line functional/no-let
+    let version;
+    if (latestVersion) {
+      version = latestVersion[1];
+    } else version = 0;
+
+    lockingStorage2.concat([e, version + 1]);
+    return [e, version + 1];
+  }
+
+  async saveAllByLatestVersionProvided(
+    eList: readonly EvenNumberEvt[],
+    latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
+  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
+    const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
+      eList.map((e, index) => [e, latestVersionProvider(e)[1] + index + 1]);
+    lockingStorage2.concat(savedEvents);
+    return savedEvents;
+  }
+}
+
 class EventRepositoryImpl3
   implements
     EventRepository<EvenNumberCmd | OddNumberCmd, OddNumberEvt | EvenNumberEvt>
@@ -244,6 +317,12 @@ const repository: EventRepository<OddNumberCmd, OddNumberEvt> =
 const repository2: EventRepository<EvenNumberCmd, EvenNumberEvt> =
   new EventRepositoryImpl2();
 
+const repositoryLocking2: EventLockingRepository<
+  EvenNumberCmd,
+  EvenNumberEvt,
+  number
+> = new EventRepositoryLockingImpl2();
+
 const repository3: EventRepository<
   EvenNumberCmd | OddNumberCmd,
   OddNumberEvt | EvenNumberEvt
@@ -267,6 +346,18 @@ const aggregate2: IEventSourcingAggregate<
   decider2,
   repository2
 );
+
+const aggregateLocking2: IEventSourcingLockingAggregate<
+  EvenNumberCmd,
+  number,
+  EvenNumberEvt,
+  number
+> = new EventSourcingLockingAggregate<
+  EvenNumberCmd,
+  number,
+  EvenNumberEvt,
+  number
+>(decider2, repositoryLocking2);
 
 const aggregate3: IEventSourcingAggregate<
   EvenNumberCmd | OddNumberCmd,
@@ -301,6 +392,12 @@ test('aggregate-handle', async (t) => {
 test('aggregate-handle2', async (t) => {
   t.deepEqual(await aggregate2.handle(new AddEvenNumberCmd(2)), [
     new EvenNumberAddedEvt(2),
+  ]);
+});
+
+test('aggregate-locking-handle2', async (t) => {
+  t.deepEqual(await aggregateLocking2.handle(new AddEvenNumberCmd(2)), [
+    [new EvenNumberAddedEvt(2), 1],
   ]);
 });
 

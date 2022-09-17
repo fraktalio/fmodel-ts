@@ -18,7 +18,7 @@
 import { IView } from '../domain/view';
 
 /**
- * Materialized view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
+ * Materialized view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateRepository` as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
  * @typeParam S - Materialized IView state of type `S`
@@ -39,7 +39,56 @@ export interface IMaterializedView<S, E>
 }
 
 /**
- * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of denormalized projection(s) via `ViewStateRepository` as a result.
+ * Materialized Locking view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateLockingRepository` as a result.
+ * Essentially, it represents the query/view side of the CQRS pattern.
+ *
+ * @typeParam S - Materialized IView state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
+ * @typeParam V - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IMaterializedLockingView<S, E, V>
+  extends IView<S, E>,
+    ViewStateLockingRepository<E, S, V> {
+  /**
+   * Handles the event of type `E`, and returns new persisted state of type `S`
+   *
+   * @param event Event of type `E` to be handled
+   * @return State of type [`S`, `V`]
+   */
+  readonly handle: (event: E) => Promise<readonly [S, V]>;
+}
+
+/**
+ * Materialized Locking and Deduplication view interface is using/delegating a `IView` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateLockingDeduplicationRepository` as a result.
+ * Essentially, it represents the query/view side of the CQRS pattern.
+ *
+ * It can deduplicate events within `at-least-once` delivery guaranty - inspired by optimistic locking
+ *
+ * @typeParam S - Materialized IView state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
+ * @typeParam EV - Version of the event
+ * @typeParam SV - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IMaterializedLockingDeduplicationView<S, E, EV, SV>
+  extends IView<S, E>,
+    ViewStateLockingDeduplicationRepository<E, S, EV, SV> {
+  /**
+   * Handles the event of type `E`, and returns new persisted state of type `S`
+   *
+   * @param eventAndVersion Event and Version of type [`E`, `EV`] to be handled
+   * @return State of type [`S`, `V`]
+   */
+  readonly handle: (
+    eventAndVersion: readonly [E, EV]
+  ) => Promise<readonly [S, SV]>;
+}
+
+/**
+ * Materialized view is using/delegating a `View` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateRepository` as a result.
  * Essentially, it represents the query/view side of the CQRS pattern.
  *
  * @typeParam S - Materialized View state of type `S`
@@ -48,11 +97,6 @@ export interface IMaterializedView<S, E>
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class MaterializedView<S, E> implements IMaterializedView<S, E> {
-  /**
-   * @constructor Creates `MaterializedView`
-   * @param view - A view component of type `IView`<`S`, `E`>
-   * @param viewStateRepository - Interface for `S`tate management/persistence
-   */
   constructor(
     private readonly view: IView<S, E>,
     private readonly viewStateRepository: ViewStateRepository<E, S>
@@ -68,12 +112,6 @@ export class MaterializedView<S, E> implements IMaterializedView<S, E> {
   readonly fetchState: (e: E) => Promise<S | null>;
   readonly save: (s: S) => Promise<S>;
 
-  /**
-   * Handles the event of type `E`, and returns new persisted state of type `S`
-   *
-   * @param event Event of type `E` to be handled
-   * @return State of type `S`
-   */
   async handle(event: E): Promise<S> {
     const currentState = await this.fetchState(event);
     const newState = this.evolve(
@@ -85,9 +123,97 @@ export class MaterializedView<S, E> implements IMaterializedView<S, E> {
 }
 
 /**
- * View State repository interface
+ * Materialized Locking view is using/delegating a `View` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateLockingRepository` as a result.
+ * Essentially, it represents the query/view side of the CQRS pattern.
  *
- * Used by [[MaterializedView]]
+ * @typeParam S - Materialized View state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
+ * @typeParam V - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class MaterializedLockingView<S, E, V>
+  implements IMaterializedLockingView<S, E, V>
+{
+  constructor(
+    private readonly view: IView<S, E>,
+    private readonly viewStateRepository: ViewStateLockingRepository<E, S, V>
+  ) {
+    this.evolve = this.view.evolve;
+    this.initialState = this.view.initialState;
+    this.fetchState = this.viewStateRepository.fetchState;
+    this.save = this.viewStateRepository.save;
+  }
+
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
+  readonly fetchState: (e: E) => Promise<readonly [S | null, V | null]>;
+  readonly save: (
+    s: S,
+    currentStateVersion: V | null
+  ) => Promise<readonly [S, V]>;
+
+  async handle(event: E): Promise<readonly [S, V]> {
+    const [currentState, currentVersion] = await this.fetchState(event);
+    const newState = this.evolve(
+      currentState ? currentState : this.initialState,
+      event
+    );
+    return this.save(newState, currentVersion);
+  }
+}
+
+/**
+ * Materialized Locking And Deduplication view is using/delegating a `View` to handle events of type `E` and to maintain a state of projection(s) via `ViewStateLockingDeduplicationRepository` as a result.
+ * Essentially, it represents the query/view side of the CQRS pattern.
+ *
+ * @typeParam S - Materialized View state of type `S`
+ * @typeParam E - Events of type `E` that are handled by this Materialized View
+ * @typeParam SV - Version of the state
+ * @typeParam EV - Version of the event
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export class MaterializedLockingDeduplicationView<S, E, EV, SV>
+  implements IMaterializedLockingDeduplicationView<S, E, EV, SV>
+{
+  constructor(
+    private readonly view: IView<S, E>,
+    private readonly viewStateRepository: ViewStateLockingDeduplicationRepository<
+      E,
+      S,
+      EV,
+      SV
+    >
+  ) {
+    this.evolve = this.view.evolve;
+    this.initialState = this.view.initialState;
+    this.fetchState = this.viewStateRepository.fetchState;
+    this.save = this.viewStateRepository.save;
+  }
+
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
+  readonly fetchState: (e: E) => Promise<readonly [S | null, SV | null]>;
+  readonly save: (
+    s: S,
+    eventVersion: EV,
+    currentStateVersion: SV | null
+  ) => readonly [S, SV];
+
+  async handle(eventAndVersion: readonly [E, EV]): Promise<readonly [S, SV]> {
+    const [event, eventVersion] = eventAndVersion;
+    const [currentState, currentStateVersion] = await this.fetchState(event);
+    const newState = this.evolve(
+      currentState ? currentState : this.initialState,
+      event
+    );
+    return this.save(newState, eventVersion, currentStateVersion);
+  }
+}
+
+/**
+ * View State repository interface
  *
  * @param E - Event
  * @param S - State
@@ -111,4 +237,69 @@ export interface ViewStateRepository<E, S> {
    * @return newly saved State of type `S`
    */
   readonly save: (s: S) => Promise<S>;
+}
+
+/**
+ * View State Locking repository interface
+ *
+ * @param E - Event
+ * @param S - State
+ * @param V - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface ViewStateLockingRepository<E, S, V> {
+  /**
+   * Fetch state
+   *
+   * @param e - Event of type `E`
+   *
+   * @return current state of type [`S` , `V`]
+   */
+  readonly fetchState: (e: E) => Promise<readonly [S | null, V | null]>;
+  /**
+   * Save state
+   *
+   * @param s - State of type `S`
+   * @param currentStateVersion - State version of type `V | null`
+   * @return newly saved State of type [`S`, `V`]
+   */
+  readonly save: (
+    s: S,
+    currentStateVersion: V | null
+  ) => Promise<readonly [S, V]>;
+}
+
+/**
+ * View State Locking and Deduplication repository interface
+ *
+ * @param E - Event
+ * @param S - State
+ * @param EV - Version of the event
+ * @param SV - Version of the state
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface ViewStateLockingDeduplicationRepository<E, S, EV, SV> {
+  /**
+   * Fetch state
+   *
+   * @param e - Event of type `E`
+   *
+   * @return current state of type [`S` , `SV`]
+   */
+  readonly fetchState: (e: E) => Promise<readonly [S | null, SV | null]>;
+  /**
+   * Save state
+   *
+   * @param s - State of type `S`
+   * @param eventVersion - Event version of type `EV`
+   * @param currentStateVersion - State version of type `SV | null`
+   * @return newly saved State of type [`S`, `V`]
+   */
+  readonly save: (
+    s: S,
+    eventVersion: EV,
+    currentStateVersion: SV | null
+  ) => readonly [S, SV];
 }
