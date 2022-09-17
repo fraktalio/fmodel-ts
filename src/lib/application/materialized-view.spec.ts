@@ -18,8 +18,11 @@ import test from 'ava';
 import { View } from '../domain/view';
 
 import {
+  IMaterializedLockingView,
   IMaterializedView,
+  MaterializedLockingView,
   MaterializedView,
+  ViewStateLockingRepository,
   ViewStateRepository,
 } from './materialized-view';
 
@@ -55,6 +58,8 @@ const view2: View<string, string> = new View<string, string>((s, e) => {
 let storage: number | null = null;
 // eslint-disable-next-line functional/no-let
 let storage2: string | null = null;
+// eslint-disable-next-line functional/no-let
+let lockingStorage2: readonly [string | null, number | null] = [null, null];
 
 class ViewStateRepositoryImpl implements ViewStateRepository<number, number> {
   async fetchState(_e: number): Promise<number | null> {
@@ -76,11 +81,32 @@ class ViewStateRepository2Impl implements ViewStateRepository<string, string> {
   }
 }
 
+class ViewStateLockingRepository2Impl
+  implements ViewStateLockingRepository<string, string, number>
+{
+  async fetchState(
+    _e: string
+  ): Promise<readonly [string | null, number | null]> {
+    return lockingStorage2;
+  }
+  async save(
+    s: string,
+    currentStateVersion: number | null
+  ): Promise<readonly [string, number]> {
+    const newVersion = (currentStateVersion ? currentStateVersion : 0) + 1;
+    lockingStorage2 = [s, newVersion];
+    return [s, newVersion];
+  }
+}
+
 const repository: ViewStateRepository<number, number> =
   new ViewStateRepositoryImpl();
 
 const repository2: ViewStateRepository<string, string> =
   new ViewStateRepository2Impl();
+
+const repositoryLocking2: ViewStateLockingRepository<string, string, number> =
+  new ViewStateLockingRepository2Impl();
 
 const materializedView: IMaterializedView<number, number> =
   new MaterializedView<number, number>(view, repository);
@@ -88,10 +114,25 @@ const materializedView: IMaterializedView<number, number> =
 const materializedView2: IMaterializedView<string, string> =
   new MaterializedView<string, string>(view2, repository2);
 
+const materializedLockingView2: IMaterializedLockingView<
+  string,
+  string,
+  number
+> = new MaterializedLockingView<string, string, number>(
+  view2,
+  repositoryLocking2
+);
+
 test('view-handle', async (t) => {
-  t.is(await materializedView.handle(1), 1);
+  t.deepEqual(await materializedView.handle(1), 1);
 });
 
 test('view2-handle', async (t) => {
-  t.is(await materializedView2.handle('Yin'), 'Yin');
+  t.deepEqual(await materializedView2.handle('Yin'), 'Yin');
+});
+
+test('view2-handle-locking', async (t) => {
+  t.deepEqual(await materializedLockingView2.handle('Yin'), ['Yin', 1]);
+  t.deepEqual(await materializedLockingView2.handle('Yun'), ['YinYun', 2]);
+  t.deepEqual(await materializedLockingView2.handle('Yan'), ['YinYunYan', 3]);
 });

@@ -148,7 +148,10 @@ export class MaterializedLockingView<S, E, V>
   readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;
   readonly fetchState: (e: E) => Promise<readonly [S | null, V | null]>;
-  readonly save: (s: S, currentStateVersion: V | null) => readonly [S, V];
+  readonly save: (
+    s: S,
+    currentStateVersion: V | null
+  ) => Promise<readonly [S, V]>;
 
   async handle(event: E): Promise<readonly [S, V]> {
     const [currentState, currentVersion] = await this.fetchState(event);
@@ -261,7 +264,10 @@ export interface ViewStateLockingRepository<E, S, V> {
    * @param currentStateVersion - State version of type `V | null`
    * @return newly saved State of type [`S`, `V`]
    */
-  readonly save: (s: S, currentStateVersion: V | null) => readonly [S, V];
+  readonly save: (
+    s: S,
+    currentStateVersion: V | null
+  ) => Promise<readonly [S, V]>;
 }
 
 /**
