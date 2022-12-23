@@ -134,7 +134,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Sin - New input State
    */
-  protected mapLeftOnState<Sin>(
+  private mapLeftOnState<Sin>(
     f: (sin: Sin) => Si
   ): _Decider<C, Sin, So, Ei, Eo> {
     return this.dimapOnState(f, identity);
@@ -145,7 +145,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  protected mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
+  private mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
     return this.dimapOnState(identity, f);
   }
 
@@ -154,7 +154,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  protected applyOnState<Son>(
+  private applyOnState<Son>(
     ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>
   ): _Decider<C, Si, Son, Ei, Eo> {
     return new _Decider(
@@ -169,7 +169,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  protected productOnState<Son>(
+  private productOnState<Son>(
     fb: _Decider<C, Si, Son, Ei, Eo>
   ): _Decider<C, Si, readonly [So, Son], Ei, Eo> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
