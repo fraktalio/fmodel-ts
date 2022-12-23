@@ -105,7 +105,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Sin - New input State
    */
-  mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
+  protected mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
     return this.dimapOnState(f, identity);
   }
 
@@ -114,7 +114,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
+  protected mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
     return this.dimapOnState(identity, f);
   }
 
@@ -123,7 +123,9 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  applyOnState<Son>(ff: _View<Si, (so: So) => Son, E>): _View<Si, Son, E> {
+  protected applyOnState<Son>(
+    ff: _View<Si, (so: So) => Son, E>
+  ): _View<Si, Son, E> {
     return new _View(
       (s: Si, e: E) => ff.evolve(s, e)(this.evolve(s, e)),
       ff.initialState(this.initialState)
@@ -135,7 +137,9 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
+  protected productOnState<Son>(
+    fb: _View<Si, Son, E>
+  ): _View<Si, readonly [So, Son], E> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
   }
 
