@@ -113,24 +113,6 @@ export class _Decider<C, Si, So, Ei, Eo>
   }
 
   /**
-   * Left map on E/Event parameter - Contravariant
-   *
-   * @typeParam Ein - New input Event
-   */
-  mapLeftOnEvent<Ein>(f: (ein: Ein) => Ei): _Decider<C, Si, So, Ein, Eo> {
-    return this.dimapOnEvent(f, identity);
-  }
-
-  /**
-   * Right map on E/Event parameter - Covariant
-   *
-   * @typeParam Eon - New output Event
-   */
-  mapOnEvent<Eon>(f: (ein: Eo) => Eon): _Decider<C, Si, So, Ei, Eon> {
-    return this.dimapOnEvent(identity, f);
-  }
-
-  /**
    * Dimap on S/State parameter - Contravariant on input state (Si) and Covariant on output state (So) = Profunctor
    *
    * @typeParam Sin - New input State
@@ -152,7 +134,9 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Sin - New input State
    */
-  mapLeftOnState<Sin>(f: (sin: Sin) => Si): _Decider<C, Sin, So, Ei, Eo> {
+  private mapLeftOnState<Sin>(
+    f: (sin: Sin) => Si
+  ): _Decider<C, Sin, So, Ei, Eo> {
     return this.dimapOnState(f, identity);
   }
 
@@ -161,7 +145,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
+  private mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
     return this.dimapOnState(identity, f);
   }
 
@@ -170,7 +154,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  applyOnState<Son>(
+  private applyOnState<Son>(
     ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>
   ): _Decider<C, Si, Son, Ei, Eo> {
     return new _Decider(
@@ -185,7 +169,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  productOnState<Son>(
+  private productOnState<Son>(
     fb: _Decider<C, Si, Son, Ei, Eo>
   ): _Decider<C, Si, readonly [So, Son], Ei, Eo> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
