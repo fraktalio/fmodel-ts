@@ -14,40 +14,6 @@
 /* eslint-disable functional/no-this-expression,functional/prefer-type-literal,functional/no-mixed-type, functional/no-class */
 
 /**
- * `I_View` represents the event handling algorithm,
- * responsible for translating the events into denormalized state,
- * which is more adequate for querying.
- *
- * @typeParam Si - input State
- * @typeParam So - output State
- * @typeParam E - Event
- *
- * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @param initialState - A starting point / An initial state of type `So`
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface I_View<Si, So, E> {
-  readonly evolve: (s: Si, e: E) => So;
-  readonly initialState: So;
-}
-
-/**
- * `IView` represents the event handling algorithm,
- * responsible for translating the events into denormalized state,
- * which is more adequate for querying.
- *
- * @typeParam S - State
- * @typeParam E - Event
- *
- * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
- * @param initialState - A starting point / An initial state of type `So`
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export type IView<S, E> = I_View<S, S, E>;
-
-/**
  * `_View` is a datatype that represents the event handling algorithm,
  * responsible for translating the events into denormalized state,
  * which is more adequate for querying.
@@ -61,12 +27,7 @@ export type IView<S, E> = I_View<S, S, E>;
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class _View<Si, So, E> implements I_View<Si, So, E> {
-  /**
-   * @constructor - creates the `_View`
-   * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
-   * @param initialState - A starting point / An initial state of type `So`
-   */
+class _View<Si, So, E> {
   constructor(
     readonly evolve: (s: Si, e: E) => So,
     readonly initialState: So
@@ -105,7 +66,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Sin - New input State
    */
-  private mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
+  mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
     return this.dimapOnState(f, identity);
   }
 
@@ -114,7 +75,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  private mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
+  mapOnState<Son>(f: (so: So) => Son): _View<Si, Son, E> {
     return this.dimapOnState(identity, f);
   }
 
@@ -123,9 +84,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  private applyOnState<Son>(
-    ff: _View<Si, (so: So) => Son, E>
-  ): _View<Si, Son, E> {
+  applyOnState<Son>(ff: _View<Si, (so: So) => Son, E>): _View<Si, Son, E> {
     return new _View(
       (s: Si, e: E) => ff.evolve(s, e)(this.evolve(s, e)),
       ff.initialState(this.initialState)
@@ -137,9 +96,7 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  private productOnState<Son>(
-    fb: _View<Si, Son, E>
-  ): _View<Si, readonly [So, Son], E> {
+  productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
   }
 
@@ -160,6 +117,26 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
 
     return viewX.productOnState(viewY);
   }
+}
+
+/**
+ * `IView` Interface
+ *
+ * Represents the event handling algorithm,
+ * responsible for translating the events into denormalized state,
+ * which is more adequate for querying.
+ *
+ * @typeParam S - State
+ * @typeParam E - Event
+ *
+ * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
+ * @param initialState - A starting point / An initial state of type `So`
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IView<S, E> {
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
 }
 
 /**
@@ -190,9 +167,52 @@ export class _View<Si, So, E> implements I_View<Si, So, E> {
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class View<S, E> extends _View<S, S, E> implements IView<S, E> {}
+export class View<S, E> implements IView<S, E> {
+  constructor(readonly evolve: (s: S, e: E) => S, readonly initialState: S) {}
+
+  /**
+   * Left map on E/Event parameter
+   *
+   * @typeParam En - New Event
+   */
+  mapLeftOnEvent<En>(f: (en: En) => E): View<S, En> {
+    return asView(new _View(this.evolve, this.initialState).mapLeftOnEvent(f));
+  }
+
+  /**
+   * Dimap on S/State parameter
+   *
+   * @typeParam Sn - New State
+   */
+  dimapOnState<Sn>(fl: (sn: Sn) => S, fr: (s: S) => Sn): View<Sn, E> {
+    return asView(
+      new _View(this.evolve, this.initialState).dimapOnState(fl, fr)
+    );
+  }
+
+  /**
+   * Combines Views into one bigger View
+   *
+   */
+  combine<S2, E2>(y: View<S2, E2>): View<readonly [S, S2], E | E2> {
+    return asView(
+      new _View(this.evolve, this.initialState).combine(
+        new _View(y.evolve, y.initialState)
+      )
+    );
+  }
+}
 
 /**
  * Identity function
  */
 const identity = <T>(t: T) => t;
+
+/**
+ * Creates `View` from internal `_View`
+ *
+ * @param view
+ */
+function asView<S, E>(view: _View<S, S, E>): View<S, E> {
+  return new View(view.evolve, view.initialState);
+}

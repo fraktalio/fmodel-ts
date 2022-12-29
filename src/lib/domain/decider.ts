@@ -11,45 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression,functional/no-mixed-type, functional/no-class, functional/prefer-type-literal */
-
-/**
- * `I_Decider` represents the main decision-making algorithm.
- * It has five generic parameters `C`, `Si`, `So`, `Ei`, `Eo` , representing the type of the values that `I_Decider` may contain or use.
- * `I_Decider` can be specialized for any type `C` or `Si` or `So` or `Ei` or `Eo` because these types does not affect its behavior.
- * `I_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
- *
- * `I_Decider` is a pure domain interface.
- *
- * @typeParam C - Command
- * @typeParam Si - Input_State type
- * @typeParam So - Output_State type
- * @typeParam Ei - Input_Event type
- * @typeParam Eo - Output_Event type
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface I_Decider<C, Si, So, Ei, Eo> {
-  readonly decide: (c: C, s: Si) => readonly Eo[];
-  readonly evolve: (s: Si, e: Ei) => So;
-  readonly initialState: So;
-}
-
-/**
- * `IDecider` represents the main decision-making algorithm.
- * It has five generic parameters `C`, `S`, `E` , representing the type of the values that `IDecider` may contain or use.
- * `IDecider` can be specialized for any type `C` or `S` or `E` because these types does not affect its behavior.
- * `IDecider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
- *
- * `IDecider` is a pure domain interface.
- *
- * @typeParam C - Command
- * @typeParam S - State
- * @typeParam E - Event
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
+/* eslint-disable functional/no-mixed-type, functional/no-class, functional/prefer-type-literal, functional/no-this-expression */
 
 /**
  * `_Decider` is a datatype that represents the main decision-making algorithm.
@@ -67,15 +29,7 @@ export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class _Decider<C, Si, So, Ei, Eo>
-  implements I_Decider<C, Si, So, Ei, Eo>
-{
-  /**
-   * @constructor Creates the `_Decider`
-   * @param decide - A function/lambda that takes command of type `C` and input state of type `Si` as parameters, and returns/emits the list of output events `Eo[]`>
-   * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
-   * @param initialState - A starting point / An initial state of type `So`
-   */
+class _Decider<C, Si, So, Ei, Eo> {
   constructor(
     readonly decide: (c: C, s: Si) => readonly Eo[],
     readonly evolve: (s: Si, e: Ei) => So,
@@ -134,9 +88,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Sin - New input State
    */
-  private mapLeftOnState<Sin>(
-    f: (sin: Sin) => Si
-  ): _Decider<C, Sin, So, Ei, Eo> {
+  mapContraOnState<Sin>(f: (sin: Sin) => Si): _Decider<C, Sin, So, Ei, Eo> {
     return this.dimapOnState(f, identity);
   }
 
@@ -145,7 +97,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  private mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
+  mapOnState<Son>(f: (so: So) => Son): _Decider<C, Si, Son, Ei, Eo> {
     return this.dimapOnState(identity, f);
   }
 
@@ -154,7 +106,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  private applyOnState<Son>(
+  applyOnState<Son>(
     ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>
   ): _Decider<C, Si, Son, Ei, Eo> {
     return new _Decider(
@@ -169,7 +121,7 @@ export class _Decider<C, Si, So, Ei, Eo>
    *
    * @typeParam Son - New output State
    */
-  private productOnState<Son>(
+  productOnState<Son>(
     fb: _Decider<C, Si, Son, Ei, Eo>
   ): _Decider<C, Si, readonly [So, Son], Ei, Eo> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
@@ -188,7 +140,7 @@ export class _Decider<C, Si, So, Ei, Eo>
     Eo | Eo2
   > {
     const deciderX = this.mapLeftOnCommand<C | C2>((c) => c as C)
-      .mapLeftOnState<readonly [Si, Si2]>((sin) => sin[0])
+      .mapContraOnState<readonly [Si, Si2]>((sin) => sin[0])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei,
         (eo) => eo
@@ -196,7 +148,7 @@ export class _Decider<C, Si, So, Ei, Eo>
 
     const deciderY = y
       .mapLeftOnCommand<C | C2>((c) => c as C2)
-      .mapLeftOnState<readonly [Si, Si2]>((sin) => sin[1])
+      .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei2,
         (eo2) => eo2
@@ -204,6 +156,30 @@ export class _Decider<C, Si, So, Ei, Eo>
 
     return deciderX.productOnState(deciderY);
   }
+}
+
+/**
+ * `IDecider` represents the main decision-making algorithm.
+ * It has three generic parameters `C`, `S`, `E` , representing the type of the values that `IDecider` may contain or use.
+ * `IDecider` can be specialized for any type `C` or `S` or `E` because these types does not affect its behavior.
+ * `IDecider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
+ *
+ * `IDecider` is a pure domain interface.
+ *
+ * @typeParam C - Command
+ * @typeParam S - State
+ * @typeParam E - Event
+ *
+ * @param decide - A function/lambda that takes command of type `C` and input state of type `S` as parameters, and returns/emits the list of output events `E[]`>
+ * @param evolve - A function/lambda that takes input state of type `S` and input event of type `E` as parameters, and returns the output/new state `S`
+ * @param initialState - A starting point / An initial state of type `S`
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IDecider<C, S, E> {
+  readonly decide: (c: C, s: S) => readonly E[];
+  readonly evolve: (s: S, e: E) => S;
+  readonly initialState: S;
 }
 
 /**
@@ -252,11 +228,82 @@ export class _Decider<C, Si, So, Ei, Eo>
  * );
  * ```
  */
-export class Decider<C, S, E>
-  extends _Decider<C, S, S, E, E>
-  implements IDecider<C, S, E> {}
+export class Decider<C, S, E> implements IDecider<C, S, E> {
+  constructor(
+    readonly decide: (c: C, s: S) => readonly E[],
+    readonly evolve: (s: S, e: E) => S,
+    readonly initialState: S
+  ) {}
+
+  /**
+   * Left map on C/Command parameter - Contravariant
+   *
+   * @typeParam Cn - New Command
+   */
+  mapLeftOnCommand<Cn>(f: (cn: Cn) => C): Decider<Cn, S, E> {
+    return asDecider(
+      new _Decider(
+        this.decide,
+        this.evolve,
+        this.initialState
+      ).mapLeftOnCommand(f)
+    );
+  }
+
+  /**
+   * Dimap on E/Event parameter
+   *
+   * @typeParam En - New Event
+   */
+  dimapOnEvent<En>(fl: (en: En) => E, fr: (e: E) => En): Decider<C, S, En> {
+    return asDecider(
+      new _Decider(this.decide, this.evolve, this.initialState).dimapOnEvent(
+        fl,
+        fr
+      )
+    );
+  }
+
+  /**
+   * Dimap on S/State parameter
+   *
+   * @typeParam Sn - New State
+   */
+  dimapOnState<Sn>(fl: (sn: Sn) => S, fr: (s: S) => Sn): Decider<C, Sn, E> {
+    return asDecider(
+      new _Decider(this.decide, this.evolve, this.initialState).dimapOnState(
+        fl,
+        fr
+      )
+    );
+  }
+
+  /**
+   * Combine Deciders into one Decider
+   */
+  combine<C2, S2, E2>(
+    y: Decider<C2, S2, E2>
+  ): Decider<C | C2, readonly [S, S2], E | E2> {
+    return asDecider(
+      new _Decider(this.decide, this.evolve, this.initialState).combine(
+        new _Decider(y.decide, y.evolve, y.initialState)
+      )
+    );
+  }
+}
 
 /**
  * Identity function
  */
 const identity = <T>(t: T) => t;
+
+/**
+ * Creates `Decider` from internal `_Decider`
+ *
+ * @param decider
+ */
+function asDecider<C, S, E>(
+  decider: _Decider<C, S, S, E, E>
+): Decider<C, S, E> {
+  return new Decider(decider.decide, decider.evolve, decider.initialState);
+}

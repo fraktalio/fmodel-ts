@@ -50,37 +50,28 @@ The arrows in the image are showing the direction of the dependency. Notice that
 
 ## Decider
 
-`_Decider` is a datatype that represents the main decision-making algorithm. It belongs to the Domain layer. It has five
-generic parameters `C`, `Si`, `So`, `Ei`, `Eo` , representing the type of the values that `_Decider` may contain or use.
-`_Decider` can be specialized for any type `C` or `Si` or `So` or `Ei` or `Eo` because these types do not affect its
-behavior. `_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
+`Decider` is a datatype that represents the main decision-making algorithm. It belongs to the Domain layer. It has three
+generic parameters `C`, `S`, `E` , representing the type of the values that `Decider` may contain or use.
+`Decider` can be specialized for any type `C` or `S` or `E` because these types do not affect its
+behavior. `Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
 
-`_Decider` is a pure domain component.
+`Decider` is a pure domain component.
 
 - `C` - Command
-- `Si` - input State
-- `So` - output State
-- `Ei` - input Event
-- `Eo` - output Event
-
-We make a difference between input and output types, and we are more general in this case. We can always specialize down
-to the 3 generic parameters: `export class Decider<C, S, E> extends _Decider<C, S, S, E, E> {}`. 
-
-**The three parameter(s) `Decider<C, S, E>` is the type you would like to use as an API, rather than using `_Decider<C, S, S, E, E>`.  Nevertheless, you have options.**
+- `S` - State
+- `E` - Event
 
 Notice that `Decider` implements an interface `IDecider` to communicate the contract.
 
 ```typescript
-export class _Decider<C, Si, So, Ei, Eo> implements I_Decider<C, Si, So, Ei, Eo> {
-    constructor(
-      readonly decide: (c: C, s: Si) => readonly Eo[],
-      readonly evolve: (s: Si, e: Ei) => So,
-      readonly initialState: So
-    ) {}
+export class Decider<C, S, E> implements IDecider<C, S, E> {
+  constructor(
+    readonly decide: (c: C, s: S) => readonly E[],
+    readonly evolve: (s: S, e: E) => S,
+    readonly initialState: S
+  ) {
+  }
 }
-
-export type IDecider<C, S, E> = I_Decider<C, S, S, E, E>;
-export class Decider<C, S, E> extends _Decider<C, S, S, E, E> implements IDecider<C, S, E> {}
 ```
 
 Additionally, `initialState` of the Decider is introduced to gain more control over the initial state of the Decider.
@@ -113,38 +104,27 @@ New state is then stored via `StateRepository.save` function.
 
 ## View
 
-`_View`  is a datatype that represents the event handling algorithm, responsible for translating the events into
+`View`  is a datatype that represents the event handling algorithm, responsible for translating the events into
 denormalized state, which is more adequate for querying. It belongs to the Domain layer. It is usually used to create
 the view/query side of the CQRS pattern. Obviously, the command side of the CQRS is usually event-sourced aggregate.
 
-It has three generic parameters `Si`, `So`, `E`, representing the type of the values that `_View` may contain or use.
-`_View` can be specialized for any type of `Si`, `So`, `E` because these types do not affect its behavior.
-`_View` behaves the same for `E`=`Int` or `E`=`YourCustomType`, for example.
+It has two generic parameters `S`, `E`, representing the type of the values that `View` may contain or use.
+`View` can be specialized for any type of `S`, `E` because these types do not affect its behavior.
+`View` behaves the same for `E`=`Int` or `E`=`YourCustomType`, for example.
 
-`_View` is a pure domain component.
+`View` is a pure domain component.
 
-- `Si` - input State
-- `So` - output State
-- `E`  - Event
-
-We make a difference between input and output types, and we are more general in this case. We can always specialize down
-to the 2 generic parameters: `class View<S, E> extends _View<S, S, E> {}`.
-
-**The two parameter(s) `View<S, E>` is the type you would like to use as an API, rather than using `_View<S, S, E>`.  Nevertheless, you have options.**
+- `S` - State
+- `E` - Event
 
 Notice that `View` implements an interface `IView` to communicate the contract.
 
 
 ```typescript
-export class _View<Si, So, E> implements I_View<Si, So, E> {
-    constructor(
-        readonly evolve: (s: Si, e: E) => So,
-        readonly initialState: So
-    ) {}
+export class View<S, E> implements IView<S, E> {
+  constructor(readonly evolve: (s: S, e: E) => S, readonly initialState: S) {
+  }
 }
-
-export type IView<S, E> = I_View<S, S, E>;
-export class View<S, E> extends _View<S, S, E> implements IView<S, E> {}
 ```
 
 ![view image](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/view.png)
