@@ -229,12 +229,12 @@ class EventRepositoryLockingImpl2
 
   async save(
     e: EvenNumberEvt,
-    latestVersion: readonly [EvenNumberEvt, number] | null
+    latestVersion: number | null
   ): Promise<readonly [EvenNumberEvt, number]> {
     // eslint-disable-next-line functional/no-let
     let version;
     if (latestVersion) {
-      version = latestVersion[1];
+      version = latestVersion;
     } else version = 0;
 
     lockingStorage2.concat([e, version + 1]);
@@ -243,12 +243,12 @@ class EventRepositoryLockingImpl2
 
   async saveAll(
     eList: readonly EvenNumberEvt[],
-    latestVersion: readonly [EvenNumberEvt, number] | null
+    latestVersion: number | null
   ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
     // eslint-disable-next-line functional/no-let
     let version: number;
     if (latestVersion) {
-      version = latestVersion[1];
+      version = latestVersion;
     } else version = 0;
 
     const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
@@ -258,7 +258,8 @@ class EventRepositoryLockingImpl2
   }
 
   readonly latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number> =
-    (_: EvenNumberEvt) => lockingStorage2[lockingStorage2.length - 1];
+    (_: EvenNumberEvt) =>
+      lockingStorage2.map((it) => it[1])[lockingStorage2.length - 1];
 
   async saveByLatestVersionProvided(
     e: EvenNumberEvt,
@@ -268,7 +269,7 @@ class EventRepositoryLockingImpl2
     // eslint-disable-next-line functional/no-let
     let version;
     if (latestVersion) {
-      version = latestVersion[1];
+      version = latestVersion;
     } else version = 0;
 
     lockingStorage2.concat([e, version + 1]);
@@ -280,7 +281,7 @@ class EventRepositoryLockingImpl2
     latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
   ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
     const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
-      eList.map((e, index) => [e, latestVersionProvider(e)[1] + index + 1]);
+      eList.map((e, index) => [e, (latestVersionProvider(e) ?? 0) + index + 1]);
     lockingStorage2.concat(savedEvents);
     return savedEvents;
   }
