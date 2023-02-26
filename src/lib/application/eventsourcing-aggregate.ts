@@ -230,13 +230,10 @@ export class EventSourcingLockingAggregate<C, S, E, V>
   }
 
   readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
-  readonly save: (
-    e: E,
-    latestVersion: readonly [E, V] | null
-  ) => Promise<readonly [E, V]>;
+  readonly save: (e: E, latestVersion: V | null) => Promise<readonly [E, V]>;
   readonly saveAll: (
     eList: readonly E[],
-    latestVersion: readonly [E, V] | null
+    latestVersion: V | null
   ) => Promise<readonly (readonly [E, V])[]>;
   readonly saveByLatestVersionProvided: (
     e: E,
@@ -256,7 +253,7 @@ export class EventSourcingLockingAggregate<C, S, E, V>
         currentEvents.map((a) => a[0]),
         command
       ),
-      currentEvents[currentEvents.length - 1]
+      currentEvents.map((a) => a[1])[currentEvents.length - 1]
     );
   }
 }
@@ -342,13 +339,10 @@ export class EventSourcingOrchestratingLockingAggregate<C, S, E, V>
   }
 
   readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
-  readonly save: (
-    e: E,
-    latestVersion: readonly [E, V] | null
-  ) => Promise<readonly [E, V]>;
+  readonly save: (e: E, latestVersion: V | null) => Promise<readonly [E, V]>;
   readonly saveAll: (
     eList: readonly E[],
-    latestVersion: readonly [E, V] | null
+    latestVersion: V | null
   ) => Promise<readonly (readonly [E, V])[]>;
   readonly saveByLatestVersionProvided: (
     e: E,
@@ -408,7 +402,7 @@ export interface EventRepository<C, E> {
   readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 }
 
-export type LatestVersionProvider<E, V> = (e: E) => readonly [E, V];
+export type LatestVersionProvider<E, V> = (e: E) => V | null;
 
 /**
  * Event Locking repository interface
@@ -435,10 +429,7 @@ export interface EventLockingRepository<C, E, V> {
    * @param latestVersion - Latest Event in this stream and its Version
    * @return  a pair of newly saved Event of type `E` and its Version of type `V`
    */
-  readonly save: (
-    e: E,
-    latestVersion: readonly [E, V] | null
-  ) => Promise<readonly [E, V]>;
+  readonly save: (e: E, latestVersion: V | null) => Promise<readonly [E, V]>;
 
   /**
    * Save events
@@ -449,7 +440,7 @@ export interface EventLockingRepository<C, E, V> {
    */
   readonly saveAll: (
     eList: readonly E[],
-    latestVersion: readonly [E, V] | null
+    latestVersion: V | null
   ) => Promise<readonly (readonly [E, V])[]>;
 
   /**
