@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression,functional/prefer-type-literal,functional/no-mixed-type, functional/no-class */
+/* eslint-disable functional/no-mixed-types,functional/no-classes */
 
 /**
  * `_View` is a datatype that represents the event handling algorithm,

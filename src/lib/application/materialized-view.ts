@@ -11,9 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-class,functional/no-this-expression */
-
-/* eslint-disable functional/prefer-type-literal */
+/* eslint-disable functional/no-classes */
 
 import { IView } from '../domain/view';
 

@@ -11,9 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-class,functional/no-this-expression */
-
-/* eslint-disable functional/prefer-type-literal */
+/* eslint-disable functional/no-classes,@typescript-eslint/no-explicit-any,functional/no-loop-statements */
 
 import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
@@ -477,7 +475,6 @@ async function asyncForEach(
   array: readonly any[],
   callback: (arg0: any, arg1: number, arg2: any) => any
 ) {
-  // eslint-disable-next-line functional/no-loop-statement,functional/no-let
   for (let index = 0; index < array.length; index++) {
     await callback(array[index], index, array);
   }

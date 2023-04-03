@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any,functional/no-class */
+/* eslint-disable functional/no-classes,@typescript-eslint/no-explicit-any */
 import test from 'ava';
 
 import { Saga } from '../domain/saga';
