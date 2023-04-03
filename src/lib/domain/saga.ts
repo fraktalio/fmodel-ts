@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-this-expression, functional/no-class, functional/prefer-type-literal */
+/* eslint-disable functional/no-classes */
 
 /**
  * `ISaga` represents the central point of control deciding what to execute next `A`.

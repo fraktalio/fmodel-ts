@@ -11,9 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
-/* eslint-disable functional/no-class */
+/* eslint-disable functional/no-classes,@typescript-eslint/no-unused-vars */
 
 import test from 'ava';
 

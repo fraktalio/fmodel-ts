@@ -11,7 +11,7 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-mixed-type, functional/no-class, functional/prefer-type-literal, functional/no-this-expression */
+/* eslint-disable functional/no-mixed-types, functional/no-classes */
 
 /**
  * `_Decider` is a datatype that represents the main decision-making algorithm.
