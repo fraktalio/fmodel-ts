@@ -96,17 +96,20 @@ export interface IStateStoredOrchestratingLockingAggregate<C, S, E, V>
  * @typeParam E - Events of type `E`
  */
 export abstract class StateComputation<C, S, E> implements IDecider<C, S, E> {
-  protected constructor(decider: IDecider<C, S, E>) {
-    this.decide = decider.decide;
-    this.evolve = decider.evolve;
+  protected constructor(protected readonly decider: IDecider<C, S, E>) {
     this.initialState = decider.initialState;
   }
-  readonly decide: (c: C, s: S) => readonly E[];
-  readonly evolve: (s: S, e: E) => S;
+  decide(c: C, s: S): readonly E[] {
+    return this.decider.decide(c, s);
+  }
+  evolve(s: S, e: E): S {
+    return this.decider.evolve(s, e);
+  }
+
   readonly initialState: S;
   protected computeNewState(state: S, command: C): S {
-    const events = this.decide(command, state);
-    return events.reduce(this.evolve, state);
+    const events = this.decider.decide(command, state);
+    return events.reduce(this.decider.evolve, state);
   }
 }
 
@@ -122,17 +125,21 @@ export abstract class StateOrchestratingComputation<C, S, E>
   extends StateComputation<C, S, E>
   implements IDecider<C, S, E>, ISaga<E, C>
 {
-  protected constructor(decider: IDecider<C, S, E>, saga: ISaga<E, C>) {
+  protected constructor(
+    decider: IDecider<C, S, E>,
+    protected readonly saga: ISaga<E, C>
+  ) {
     super(decider);
-    this.react = saga.react;
   }
-  readonly react: (ar: E) => readonly C[];
+  react(ar: E): readonly C[] {
+    return this.saga.react(ar);
+  }
   protected override computeNewState(state: S, command: C): S {
-    const events = this.decide(command, state);
+    const events = this.decider.decide(command, state);
     // eslint-disable-next-line functional/no-let
-    let newState = events.reduce(this.evolve, state);
+    let newState = events.reduce(this.decider.evolve, state);
     events
-      .flatMap((it) => this.react(it))
+      .flatMap((it) => this.saga.react(it))
       .forEach((c) => (newState = this.computeNewState(newState, c)));
     return newState;
   }
@@ -156,19 +163,24 @@ export class StateStoredAggregate<C, S, E>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    stateRepository: StateRepository<C, S>
+    protected readonly stateRepository: StateRepository<C, S>
   ) {
     super(decider);
-    this.fetchState = stateRepository.fetchState;
-    this.save = stateRepository.save;
   }
-  readonly fetchState: (c: C) => Promise<S | null>;
-  readonly save: (s: S) => Promise<S>;
+
+  async fetchState(c: C): Promise<S | null> {
+    return this.stateRepository.fetchState(c);
+  }
+
+  async save(s: S): Promise<S> {
+    return this.stateRepository.save(s);
+  }
+
   async handle(command: C): Promise<S> {
-    const currentState = await this.fetchState(command);
-    return this.save(
+    const currentState = await this.stateRepository.fetchState(command);
+    return this.stateRepository.save(
       this.computeNewState(
-        currentState ? currentState : this.initialState,
+        currentState ? currentState : this.decider.initialState,
         command
       )
     );
@@ -194,19 +206,24 @@ export class StateStoredLockingAggregate<C, S, E, V>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    stateRepository: StateLockingRepository<C, S, V>
+    protected readonly stateRepository: StateLockingRepository<C, S, V>
   ) {
     super(decider);
-    this.fetchState = stateRepository.fetchState;
-    this.save = stateRepository.save;
   }
-  readonly fetchState: (c: C) => Promise<readonly [S | null, V | null]>;
-  readonly save: (s: S, v: V | null) => Promise<readonly [S, V]>;
+  async fetchState(c: C): Promise<readonly [S | null, V | null]> {
+    return this.stateRepository.fetchState(c);
+  }
+
+  async save(s: S, v: V | null): Promise<readonly [S, V]> {
+    return this.stateRepository.save(s, v);
+  }
   async handle(command: C): Promise<readonly [S, V]> {
-    const [currentState, version] = await this.fetchState(command);
-    return this.save(
+    const [currentState, version] = await this.stateRepository.fetchState(
+      command
+    );
+    return this.stateRepository.save(
       this.computeNewState(
-        currentState ? currentState : this.initialState,
+        currentState ? currentState : this.decider.initialState,
         command
       ),
       version
@@ -233,20 +250,23 @@ export class StateStoredOrchestratingAggregate<C, S, E>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    stateRepository: StateRepository<C, S>,
+    protected readonly stateRepository: StateRepository<C, S>,
     saga: ISaga<E, C>
   ) {
     super(decider, saga);
-    this.fetchState = stateRepository.fetchState;
-    this.save = stateRepository.save;
   }
-  readonly fetchState: (c: C) => Promise<S | null>;
-  readonly save: (s: S) => Promise<S>;
+  async fetchState(c: C): Promise<S | null> {
+    return this.stateRepository.fetchState(c);
+  }
+
+  async save(s: S): Promise<S> {
+    return this.stateRepository.save(s);
+  }
   async handle(command: C): Promise<S> {
-    const currentState = await this.fetchState(command);
-    return this.save(
+    const currentState = await this.stateRepository.fetchState(command);
+    return this.stateRepository.save(
       this.computeNewState(
-        currentState ? currentState : this.initialState,
+        currentState ? currentState : this.decider.initialState,
         command
       )
     );
@@ -273,20 +293,27 @@ export class StateStoredOrchestratingLockingAggregate<C, S, E, V>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    stateRepository: StateLockingRepository<C, S, V>,
+    protected readonly stateRepository: StateLockingRepository<C, S, V>,
     saga: ISaga<E, C>
   ) {
     super(decider, saga);
-    this.fetchState = stateRepository.fetchState;
-    this.save = stateRepository.save;
   }
-  readonly fetchState: (c: C) => Promise<readonly [S | null, V | null]>;
-  readonly save: (s: S, v: V | null) => Promise<readonly [S, V]>;
+
+  async fetchState(c: C): Promise<readonly [S | null, V | null]> {
+    return this.stateRepository.fetchState(c);
+  }
+
+  async save(s: S, v: V | null): Promise<readonly [S, V]> {
+    return this.stateRepository.save(s, v);
+  }
+
   async handle(command: C): Promise<readonly [S, V]> {
-    const [currentState, version] = await this.fetchState(command);
-    return this.save(
+    const [currentState, version] = await this.stateRepository.fetchState(
+      command
+    );
+    return this.stateRepository.save(
       this.computeNewState(
-        currentState ? currentState : this.initialState,
+        currentState ? currentState : this.decider.initialState,
         command
       ),
       version

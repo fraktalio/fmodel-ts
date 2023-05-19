@@ -96,27 +96,33 @@ export interface IMaterializedLockingDeduplicationView<S, E, EV, SV>
  */
 export class MaterializedView<S, E> implements IMaterializedView<S, E> {
   constructor(
-    private readonly view: IView<S, E>,
-    private readonly viewStateRepository: ViewStateRepository<E, S>
+    protected readonly view: IView<S, E>,
+    protected readonly viewStateRepository: ViewStateRepository<E, S>
   ) {
-    this.evolve = this.view.evolve;
     this.initialState = this.view.initialState;
-    this.fetchState = this.viewStateRepository.fetchState;
-    this.save = this.viewStateRepository.save;
   }
 
-  readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;
-  readonly fetchState: (e: E) => Promise<S | null>;
-  readonly save: (s: S) => Promise<S>;
+
+  evolve(s: S, e: E): S {
+    return this.view.evolve(s, e);
+  }
+
+  async fetchState(e: E): Promise<S | null> {
+    return this.viewStateRepository.fetchState(e);
+  }
+
+  async save(s: S): Promise<S> {
+    return this.viewStateRepository.save(s);
+  }
 
   async handle(event: E): Promise<S> {
-    const currentState = await this.fetchState(event);
-    const newState = this.evolve(
-      currentState ? currentState : this.initialState,
+    const currentState = await this.viewStateRepository.fetchState(event);
+    const newState = this.view.evolve(
+      currentState ? currentState : this.view.initialState,
       event
     );
-    return this.save(newState);
+    return this.viewStateRepository.save(newState);
   }
 }
 
@@ -134,30 +140,33 @@ export class MaterializedLockingView<S, E, V>
   implements IMaterializedLockingView<S, E, V>
 {
   constructor(
-    private readonly view: IView<S, E>,
-    private readonly viewStateRepository: ViewStateLockingRepository<E, S, V>
+    protected readonly view: IView<S, E>,
+    protected readonly viewStateRepository: ViewStateLockingRepository<E, S, V>
   ) {
-    this.evolve = this.view.evolve;
     this.initialState = this.view.initialState;
-    this.fetchState = this.viewStateRepository.fetchState;
-    this.save = this.viewStateRepository.save;
   }
 
-  readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;
-  readonly fetchState: (e: E) => Promise<readonly [S | null, V | null]>;
-  readonly save: (
-    s: S,
-    currentStateVersion: V | null
-  ) => Promise<readonly [S, V]>;
+  evolve(s: S, e: E): S {
+    return this.view.evolve(s, e);
+  }
+
+  async fetchState(e: E): Promise<readonly [S | null, V | null]> {
+    return this.viewStateRepository.fetchState(e);
+  }
+
+  async save(s: S, currentStateVersion: V | null): Promise<readonly [S, V]> {
+    return this.viewStateRepository.save(s, currentStateVersion);
+  }
 
   async handle(event: E): Promise<readonly [S, V]> {
-    const [currentState, currentVersion] = await this.fetchState(event);
-    const newState = this.evolve(
-      currentState ? currentState : this.initialState,
+    const [currentState, currentVersion] =
+      await this.viewStateRepository.fetchState(event);
+    const newState = this.view.evolve(
+      currentState ? currentState : this.view.initialState,
       event
     );
-    return this.save(newState, currentVersion);
+    return this.viewStateRepository.save(newState, currentVersion);
   }
 }
 
@@ -176,37 +185,48 @@ export class MaterializedLockingDeduplicationView<S, E, EV, SV>
   implements IMaterializedLockingDeduplicationView<S, E, EV, SV>
 {
   constructor(
-    private readonly view: IView<S, E>,
-    private readonly viewStateRepository: ViewStateLockingDeduplicationRepository<
+    protected readonly view: IView<S, E>,
+    protected readonly viewStateRepository: ViewStateLockingDeduplicationRepository<
       E,
       S,
       EV,
       SV
     >
   ) {
-    this.evolve = this.view.evolve;
     this.initialState = this.view.initialState;
-    this.fetchState = this.viewStateRepository.fetchState;
-    this.save = this.viewStateRepository.save;
   }
 
-  readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;
-  readonly fetchState: (e: E) => Promise<readonly [S | null, SV | null]>;
-  readonly save: (
+
+  evolve(s: S, e: E): S {
+    return this.view.evolve(s, e);
+  }
+
+  async fetchState(e: E): Promise<readonly [S | null, SV | null]> {
+    return this.viewStateRepository.fetchState(e);
+  }
+
+  async save(
     s: S,
     eventVersion: EV,
     currentStateVersion: SV | null
-  ) => readonly [S, SV];
+  ): Promise<readonly [S, SV]> {
+    return this.viewStateRepository.save(s, eventVersion, currentStateVersion);
+  }
 
   async handle(eventAndVersion: readonly [E, EV]): Promise<readonly [S, SV]> {
     const [event, eventVersion] = eventAndVersion;
-    const [currentState, currentStateVersion] = await this.fetchState(event);
-    const newState = this.evolve(
-      currentState ? currentState : this.initialState,
+    const [currentState, currentStateVersion] =
+      await this.viewStateRepository.fetchState(event);
+    const newState = this.view.evolve(
+      currentState ? currentState : this.view.initialState,
       event
     );
-    return this.save(newState, eventVersion, currentStateVersion);
+    return this.viewStateRepository.save(
+      newState,
+      eventVersion,
+      currentStateVersion
+    );
   }
 }
 
@@ -299,5 +319,5 @@ export interface ViewStateLockingDeduplicationRepository<E, S, EV, SV> {
     s: S,
     eventVersion: EV,
     currentStateVersion: SV | null
-  ) => readonly [S, SV];
+  ) => Promise<readonly [S, SV]>;
 }

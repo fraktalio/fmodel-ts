@@ -106,18 +106,23 @@ export interface IEventSourcingOrchestratingLockingAggregate<C, S, E, V>
  * An abstract algorithm to compute new events based on the old events and the command being handled.
  */
 export abstract class EventComputation<C, S, E> implements IDecider<C, S, E> {
-  protected constructor(decider: IDecider<C, S, E>) {
-    this.decide = decider.decide;
-    this.evolve = decider.evolve;
+  protected constructor(protected readonly decider: IDecider<C, S, E>) {
     this.initialState = decider.initialState;
   }
-  readonly decide: (c: C, s: S) => readonly E[];
-  readonly evolve: (s: S, e: E) => S;
   readonly initialState: S;
+  decide(c: C, s: S): readonly E[] {
+    return this.decider.decide(c, s);
+  }
+  evolve(s: S, e: E): S {
+    return this.decider.evolve(s, e);
+  }
 
   protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
-    const currentState = events.reduce(this.evolve, this.initialState);
-    return this.decide(command, currentState);
+    const currentState = events.reduce(
+      this.decider.evolve,
+      this.decider.initialState
+    );
+    return this.decider.decide(command, currentState);
   }
 }
 
@@ -129,12 +134,15 @@ export abstract class EventOrchestratingComputation<C, S, E>
   extends EventComputation<C, S, E>
   implements IDecider<C, S, E>, ISaga<E, C>
 {
-  protected constructor(decider: IDecider<C, S, E>, saga: ISaga<E, C>) {
+  protected constructor(
+    decider: IDecider<C, S, E>,
+    protected readonly saga: ISaga<E, C>
+  ) {
     super(decider);
-    this.react = saga.react;
   }
-  readonly react: (ar: E) => readonly C[];
-
+  react(ar: E): readonly C[] {
+    return this.saga.react(ar);
+  }
   protected async computeNewEventsByOrchestrating(
     events: readonly E[],
     command: C,
@@ -143,7 +151,7 @@ export abstract class EventOrchestratingComputation<C, S, E>
     // eslint-disable-next-line functional/no-let
     let resultingEvents = super.computeNewEvents(events, command);
     await asyncForEach(
-      resultingEvents.flatMap((it) => this.react(it)),
+      resultingEvents.flatMap((it) => this.saga.react(it)),
       async (c) => {
         const newEvents = this.computeNewEventsByOrchestrating(
           (await fetchEvents(c)).concat(resultingEvents),
@@ -176,21 +184,27 @@ export class EventSourcingAggregate<C, S, E>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    eventRepository: EventRepository<C, E>
+    protected readonly eventRepository: EventRepository<C, E>
   ) {
     super(decider);
-    this.fetchEvents = eventRepository.fetchEvents;
-    this.save = eventRepository.save;
-    this.saveAll = eventRepository.saveAll;
+  }
+  async fetchEvents(c: C): Promise<readonly E[]> {
+    return this.eventRepository.fetchEvents(c);
   }
 
-  readonly fetchEvents: (c: C) => Promise<readonly E[]>;
-  readonly save: (e: E) => Promise<E>;
-  readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
+  async save(e: E): Promise<E> {
+    return this.eventRepository.save(e);
+  }
+
+  async saveAll(eList: readonly E[]): Promise<readonly E[]> {
+    return this.eventRepository.saveAll(eList);
+  }
 
   async handle(command: C): Promise<readonly E[]> {
-    const currentEvents = await this.fetchEvents(command);
-    return this.saveAll(this.computeNewEvents(currentEvents, command));
+    const currentEvents = await this.eventRepository.fetchEvents(command);
+    return this.eventRepository.saveAll(
+      this.computeNewEvents(currentEvents, command)
+    );
   }
 }
 
@@ -214,39 +228,53 @@ export class EventSourcingLockingAggregate<C, S, E, V>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    eventRepository: EventLockingRepository<C, E, V>
+    protected readonly eventRepository: EventLockingRepository<C, E, V>
   ) {
     super(decider);
-    this.fetchEvents = eventRepository.fetchEvents;
-    this.save = eventRepository.save;
-    this.saveAll = eventRepository.saveAll;
-    this.latestVersionProvider = eventRepository.latestVersionProvider;
-    this.saveByLatestVersionProvided =
-      eventRepository.saveByLatestVersionProvided;
-    this.saveAllByLatestVersionProvided =
-      eventRepository.saveAllByLatestVersionProvided;
+  }
+  async fetchEvents(c: C): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.fetchEvents(c);
   }
 
-  readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
-  readonly save: (e: E, latestVersion: V | null) => Promise<readonly [E, V]>;
-  readonly saveAll: (
+  latestVersionProvider(e: E): V | null {
+    return this.eventRepository.latestVersionProvider(e);
+  }
+
+  async save(e: E, latestVersion: V | null): Promise<readonly [E, V]> {
+    return this.eventRepository.save(e, latestVersion);
+  }
+
+  async saveAll(
     eList: readonly E[],
     latestVersion: V | null
-  ) => Promise<readonly (readonly [E, V])[]>;
-  readonly saveByLatestVersionProvided: (
-    e: E,
-    latestVersionProvider: LatestVersionProvider<E, V>
-  ) => Promise<readonly [E, V]>;
-  readonly saveAllByLatestVersionProvided: (
+  ): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.saveAll(eList, latestVersion);
+  }
+
+  async saveAllByLatestVersionProvided(
     eList: readonly E[],
     latestVersionProvider: LatestVersionProvider<E, V>
-  ) => Promise<readonly (readonly [E, V])[]>;
-  readonly latestVersionProvider: LatestVersionProvider<E, V>;
+  ): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.saveAllByLatestVersionProvided(
+      eList,
+      latestVersionProvider
+    );
+  }
+
+  async saveByLatestVersionProvided(
+    e: E,
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ): Promise<readonly [E, V]> {
+    return this.eventRepository.saveByLatestVersionProvided(
+      e,
+      latestVersionProvider
+    );
+  }
 
   async handle(command: C): Promise<readonly (readonly [E, V])[]> {
-    const currentEvents = await this.fetchEvents(command);
+    const currentEvents = await this.eventRepository.fetchEvents(command);
 
-    return this.saveAll(
+    return this.eventRepository.saveAll(
       this.computeNewEvents(
         currentEvents.map((a) => a[0]),
         command
@@ -276,26 +304,27 @@ export class EventSourcingOrchestratingAggregate<C, S, E>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    eventRepository: EventRepository<C, E>,
+    protected readonly eventRepository: EventRepository<C, E>,
     saga: ISaga<E, C>
   ) {
     super(decider, saga);
-    this.fetchEvents = eventRepository.fetchEvents;
-    this.save = eventRepository.save;
-    this.saveAll = eventRepository.saveAll;
   }
-
-  readonly fetchEvents: (c: C) => Promise<readonly E[]>;
-  readonly save: (e: E) => Promise<E>;
-  readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
-
+  async fetchEvents(c: C): Promise<readonly E[]> {
+    return this.eventRepository.fetchEvents(c);
+  }
+  async save(e: E): Promise<E> {
+    return this.eventRepository.save(e);
+  }
+  async saveAll(eList: readonly E[]): Promise<readonly E[]> {
+    return this.eventRepository.saveAll(eList);
+  }
   async handle(command: C): Promise<readonly E[]> {
-    const currentEvents = await this.fetchEvents(command);
-    return this.saveAll(
+    const currentEvents = await this.eventRepository.fetchEvents(command);
+    return this.eventRepository.saveAll(
       await this.computeNewEventsByOrchestrating(
         currentEvents,
         command,
-        this.fetchEvents
+        this.eventRepository.fetchEvents
       )
     );
   }
@@ -322,43 +351,58 @@ export class EventSourcingOrchestratingLockingAggregate<C, S, E, V>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    eventRepository: EventLockingRepository<C, E, V>,
+    protected readonly eventRepository: EventLockingRepository<C, E, V>,
     saga: ISaga<E, C>
   ) {
     super(decider, saga);
-    this.fetchEvents = eventRepository.fetchEvents;
-    this.save = eventRepository.save;
-    this.saveAll = eventRepository.saveAll;
-    this.latestVersionProvider = eventRepository.latestVersionProvider;
-    this.saveByLatestVersionProvided =
-      eventRepository.saveByLatestVersionProvided;
-    this.saveAllByLatestVersionProvided =
-      eventRepository.saveAllByLatestVersionProvided;
+  }
+  async fetchEvents(c: C): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.fetchEvents(c);
   }
 
-  readonly fetchEvents: (c: C) => Promise<readonly (readonly [E, V])[]>;
-  readonly save: (e: E, latestVersion: V | null) => Promise<readonly [E, V]>;
-  readonly saveAll: (
+  latestVersionProvider(e: E): V | null {
+    return this.eventRepository.latestVersionProvider(e);
+  }
+
+  async save(e: E, latestVersion: V | null): Promise<readonly [E, V]> {
+    return this.eventRepository.save(e, latestVersion);
+  }
+
+  async saveAll(
     eList: readonly E[],
     latestVersion: V | null
-  ) => Promise<readonly (readonly [E, V])[]>;
-  readonly saveByLatestVersionProvided: (
-    e: E,
-    latestVersionProvider: LatestVersionProvider<E, V>
-  ) => Promise<readonly [E, V]>;
-  readonly saveAllByLatestVersionProvided: (
+  ): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.saveAll(eList, latestVersion);
+  }
+
+  async saveAllByLatestVersionProvided(
     eList: readonly E[],
     latestVersionProvider: LatestVersionProvider<E, V>
-  ) => Promise<readonly (readonly [E, V])[]>;
-  readonly latestVersionProvider: LatestVersionProvider<E, V>;
+  ): Promise<readonly (readonly [E, V])[]> {
+    return this.eventRepository.saveAllByLatestVersionProvided(
+      eList,
+      latestVersionProvider
+    );
+  }
+
+  async saveByLatestVersionProvided(
+    e: E,
+    latestVersionProvider: LatestVersionProvider<E, V>
+  ): Promise<readonly [E, V]> {
+    return this.eventRepository.saveByLatestVersionProvided(
+      e,
+      latestVersionProvider
+    );
+  }
 
   async handle(command: C): Promise<readonly (readonly [E, V])[]> {
-    const currentEvents = await this.fetchEvents(command);
-    return this.saveAllByLatestVersionProvided(
+    const currentEvents = await this.eventRepository.fetchEvents(command);
+    return this.eventRepository.saveAllByLatestVersionProvided(
       await this.computeNewEventsByOrchestrating(
         currentEvents.map((a) => a[0]),
         command,
-        async (c: C) => (await this.fetchEvents(c)).map((it) => it[0])
+        async (c: C) =>
+          (await this.eventRepository.fetchEvents(c)).map((it) => it[0])
       ),
       this.latestVersionProvider
     );

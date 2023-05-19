@@ -46,17 +46,21 @@ export class SagaManager<AR, A> implements ISagaManager<AR, A> {
    * @param actionPublisher - Interface for `A`ction publishing of type `IActionPublisher`<`A`>
    */
   constructor(
-    private readonly saga: ISaga<AR, A>,
-    private readonly actionPublisher: ActionPublisher<A>
-  ) {
-    this.react = this.saga.react;
-    this.publish = this.actionPublisher.publish;
-    this.publishAll = this.actionPublisher.publishAll;
+    protected readonly saga: ISaga<AR, A>,
+    protected readonly actionPublisher: ActionPublisher<A>
+  ) {}
+
+  react(ar: AR): readonly A[] {
+    return this.saga.react(ar);
   }
 
-  readonly react: (ar: AR) => readonly A[];
-  readonly publish: (a: A) => Promise<A>;
-  readonly publishAll: (aList: readonly A[]) => Promise<readonly A[]>;
+  async publish(a: A): Promise<A> {
+    return this.actionPublisher.publish(a);
+  }
+
+  async publishAll(aList: readonly A[]): Promise<readonly A[]> {
+    return this.actionPublisher.publishAll(aList);
+  }
 
   /**
    * Handles the action result of type `AR`
@@ -65,7 +69,7 @@ export class SagaManager<AR, A> implements ISagaManager<AR, A> {
    * @return list of Actions of type `A`
    */
   async handle(actionResult: AR): Promise<readonly A[]> {
-    return this.publishAll(this.react(actionResult));
+    return this.actionPublisher.publishAll(this.saga.react(actionResult));
   }
 }
 
