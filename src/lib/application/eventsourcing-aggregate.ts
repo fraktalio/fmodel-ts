@@ -236,7 +236,7 @@ export class EventSourcingLockingAggregate<C, S, E, V>
     return this.eventRepository.fetchEvents(c);
   }
 
-  latestVersionProvider(e: E): V | null {
+  async latestVersionProvider(e: E): Promise<V | null> {
     return this.eventRepository.latestVersionProvider(e);
   }
 
@@ -360,7 +360,7 @@ export class EventSourcingOrchestratingLockingAggregate<C, S, E, V>
     return this.eventRepository.fetchEvents(c);
   }
 
-  latestVersionProvider(e: E): V | null {
+  async latestVersionProvider(e: E): Promise<V | null> {
     return this.eventRepository.latestVersionProvider(e);
   }
 
@@ -444,7 +444,7 @@ export interface EventRepository<C, E> {
   readonly saveAll: (eList: readonly E[]) => Promise<readonly E[]>;
 }
 
-export type LatestVersionProvider<E, V> = (e: E) => V | null;
+export type LatestVersionProvider<E, V> = (e: E) => Promise<V | null>;
 
 /**
  * Event Locking repository interface

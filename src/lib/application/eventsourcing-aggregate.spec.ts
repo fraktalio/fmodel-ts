@@ -256,14 +256,14 @@ class EventRepositoryLockingImpl2
   }
 
   readonly latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number> =
-    (_: EvenNumberEvt) =>
+    async (_: EvenNumberEvt) =>
       lockingStorage2.map((it) => it[1])[lockingStorage2.length - 1];
 
   async saveByLatestVersionProvided(
     e: EvenNumberEvt,
     latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
   ): Promise<readonly [EvenNumberEvt, number]> {
-    const latestVersion = latestVersionProvider(e);
+    const latestVersion = await latestVersionProvider(e);
     // eslint-disable-next-line functional/no-let
     let version;
     if (latestVersion) {
@@ -279,7 +279,12 @@ class EventRepositoryLockingImpl2
     latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
   ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
     const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
-      eList.map((e, index) => [e, (latestVersionProvider(e) ?? 0) + index + 1]);
+      await Promise.all(
+        eList.map(async (e, index) => [
+          e,
+          ((await latestVersionProvider(e)) ?? 0) + index + 1,
+        ])
+      );
     lockingStorage2.concat(savedEvents);
     return savedEvents;
   }
