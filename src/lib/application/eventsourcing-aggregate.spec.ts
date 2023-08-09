@@ -24,10 +24,12 @@ import {
   EventSourcingAggregate,
   EventSourcingLockingAggregate,
   EventSourcingOrchestratingAggregate,
+  EventSourcingOrchestratingLockingAggregate,
   IEventSourcingAggregate,
   IEventSourcingLockingAggregate,
   IEventSourcingOrchestratingAggregate,
-  LatestVersionProvider,
+  IEventSourcingOrchestratingLockingAggregate,
+  LatestVersionProvider
 } from './eventsourcing-aggregate';
 
 // ################################
@@ -383,6 +385,18 @@ const aggregate4: IEventSourcingOrchestratingAggregate<
   OddNumberEvt | EvenNumberEvt
 >(decider.combine(decider2), repository3, saga);
 
+const aggregateLocking4: IEventSourcingOrchestratingLockingAggregate<
+  EvenNumberCmd | OddNumberCmd,
+  readonly [number, number],
+  OddNumberEvt | EvenNumberEvt,
+  number
+> = new EventSourcingOrchestratingLockingAggregate<
+  EvenNumberCmd | OddNumberCmd,
+  readonly [number, number],
+  OddNumberEvt | EvenNumberEvt,
+  number
+>(decider.combine(decider2), repositoryLocking2, saga);
+
 // ################################
 // ############ Tests #############
 // ################################
@@ -427,5 +441,12 @@ test('aggregate-handle6', async (t) => {
   t.deepEqual(await aggregate4.handle(new AddOddNumberCmd(7)), [
     new OddNumberAddedEvt(7),
     new EvenNumberAddedEvt(8),
+  ]);
+});
+
+test('aggregate-locking-handle6', async (t) => {
+  t.deepEqual(await aggregateLocking4.handle(new AddOddNumberCmd(7)), [
+    [new OddNumberAddedEvt(7), 1],
+    [new EvenNumberAddedEvt(8), 2],
   ]);
 });
