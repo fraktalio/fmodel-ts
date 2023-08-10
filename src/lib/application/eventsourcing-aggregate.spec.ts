@@ -29,7 +29,7 @@ import {
   IEventSourcingLockingAggregate,
   IEventSourcingOrchestratingAggregate,
   IEventSourcingOrchestratingLockingAggregate,
-  LatestVersionProvider
+  LatestVersionProvider,
 } from './eventsourcing-aggregate';
 
 // ################################
