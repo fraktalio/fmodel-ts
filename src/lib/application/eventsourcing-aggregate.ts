@@ -404,7 +404,7 @@ export class EventSourcingOrchestratingLockingAggregate<C, S, E, V>
         async (c: C) =>
           (await this.eventRepository.fetchEvents(c)).map((it) => it[0])
       ),
-      this.latestVersionProvider
+      this.latestVersionProvider.bind(this)
     );
   }
 }
