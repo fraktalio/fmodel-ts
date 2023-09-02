@@ -184,7 +184,9 @@ npm i @fraktalio/fmodel-ts
 > Available on [https://www.npmjs.com/package/@fraktalio/fmodel-ts](https://www.npmjs.com/package/@fraktalio/fmodel-ts)
 
 ## Examples
-Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
+
+- Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
+- [Event sourcing and event streaming with Axon - Gift Card domain](https://github.com/AxonIQ/giftcard-demo-ts)
 
 ## Resources
 
