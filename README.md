@@ -188,10 +188,15 @@ npm i @fraktalio/fmodel-ts
 - Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
 - [Event sourcing and event streaming with Axon - Gift Card domain](https://github.com/AxonIQ/giftcard-demo-ts)
 
+### FModel in other languages
+
+- [FModel in Kotlin](https://github.com/fraktalio/fmodel)
+- [FModel in Rust](https://github.com/fraktalio/fmodel-rust)
+
+
 ## Resources
 
 - [The Blog - Domain modeling](https://fraktalio.com/blog/)
-- [A Kotlin multiplatform version of the library](https://github.com/fraktalio/fmodel)
 - [Event Modeling - What is it?](https://eventmodeling.org/posts/what-is-event-modeling/)
 
 ## Credits
