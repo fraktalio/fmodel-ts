@@ -33,21 +33,6 @@ export interface ISaga<AR, A> {
  * @typeParam AR - Action Result type
  * @typeParam A - Action type
  *
- * @example
- * ```typescript
- * const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<OddNumberEvt, EvenNumberCmd>(
- * (ar) => {
- *   if (ar instanceof OddNumberAddedEvt) {
- *      return [new AddEvenNumberCmd(ar.value + 1)];
- *    } else if (ar instanceof OddNumberMultipliedEvt) {
- *      return [new MultiplyEvenNumberCmd(ar.value + 1)];
- *    } else {
- *      const _: never = e;
- *      console.log('Never just happened in react function: ' + _);
- *      return [];
- *    }
- * });
- * ```
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class Saga<AR, A> implements ISaga<AR, A> {
