@@ -87,9 +87,7 @@ const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
       return s * e.value;
     } else {
       const _: never = e;
-      console.log('Returning state 1: ' + s);
-      console.log('Never just happened in evolve function decider 1: ' + _);
-      console.log('Returning state 2: ' + s);
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
@@ -113,16 +111,13 @@ const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
     }
   },
   (s, e) => {
-    console.log('S: ' + s + ', E: ' + e.value);
     if (e instanceof EvenNumberAddedEvt) {
-      console.log('EvenNumberAddedEvt: ' + e.value);
       return s + e.value;
     } else if (e instanceof EvenNumberMultiplied) {
-      console.log('EvenNumberMultiplied: ' + e);
       return s * e.value;
     } else {
       const _: never = e;
-      console.log('Never just happened in evolve function in decider 2 ' + _);
+      console.log('Never just happened in evolve function: ' + _);
       return s;
     }
   },
@@ -187,16 +182,13 @@ const decider4: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> = new Decider<
     }
   },
   (s, e) => {
-    console.log('S: ' + s + ', E: ' + e.value);
     if (e instanceof EvenNumberAddedEvt) {
-      console.log('EvenNumberAddedEvt: ' + e.value);
       return { evenNumber: s.evenNumber + e.value };
     } else if (e instanceof EvenNumberMultiplied) {
-      console.log('EvenNumberMultiplied: ' + e);
       return { evenNumber: s.evenNumber * e.value };
     } else {
       const _: never = e;
-      console.log('Never just happened in evolve function in decider 2 ' + _);
+      console.log('Never just happened in evolve function: ' + _);
       return { evenNumber: s.evenNumber };
     }
   },
