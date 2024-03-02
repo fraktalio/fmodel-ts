@@ -34,11 +34,11 @@ class _View<Si, So, E> {
   ) {}
 
   /**
-   * Left map on E/Event parameter - Contravariant
+   * Contra (Left) map on E/Event parameter - Contravariant
    *
    * @typeParam En - New Event
    */
-  mapLeftOnEvent<En>(f: (en: En) => E): _View<Si, So, En> {
+  mapContraOnEvent<En>(f: (en: En) => E): _View<Si, So, En> {
     return new _View(
       (s: Si, en: En) => this.evolve(s, f(en)),
       this.initialState
@@ -62,16 +62,16 @@ class _View<Si, So, E> {
   }
 
   /**
-   * Left map on S/State parameter - Contravariant
+   * Contra (Left) map on S/State parameter - Contravariant
    *
    * @typeParam Sin - New input State
    */
-  mapLeftOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
+  mapContraOnState<Sin>(f: (sin: Sin) => Si): _View<Sin, So, E> {
     return this.dimapOnState(f, identity);
   }
 
   /**
-   * Right map on S/State parameter - Covariant
+   * (Right) map on S/State parameter - Covariant
    *
    * @typeParam Son - New output State
    */
@@ -94,6 +94,8 @@ class _View<Si, So, E> {
   /**
    * Right product on S/State parameter - Applicative
    *
+   * Combines state via tuple [So, Son]
+   *
    * @typeParam Son - New output State
    */
   productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
@@ -101,21 +103,58 @@ class _View<Si, So, E> {
   }
 
   /**
-   * Combines Views into one bigger View
+   * Right product on S/State parameter - Applicative
+   *
+   * Combines state via intersection (So & Son)
+   *
+   * @typeParam Son - New output State
+   */
+  productAndIntersectionOnState<Son extends object>(
+    fb: _View<Si, Son, E>
+  ): _View<Si, So & Son, E> {
+    return this.applyOnState(
+      fb.mapOnState((b: Son) => (a: So) => ({ ...a, ...b }))
+    );
+  }
+
+  /**
+   * Combines multiple Views into one View.
+   *
+   * Combines state via tuple [So, Son].
    *
    */
   combine<Si2, So2, E2>(
     y: _View<Si2, So2, E2>
   ): _View<readonly [Si, Si2], readonly [So, So2], E | E2> {
-    const viewX = this.mapLeftOnEvent<E | E2>(
+    const viewX = this.mapContraOnEvent<E | E2>(
       (en) => en as unknown as E
-    ).mapLeftOnState<readonly [Si, Si2]>((sin) => sin[0]);
+    ).mapContraOnState<readonly [Si, Si2]>((sin) => sin[0]);
 
     const viewY = y
-      .mapLeftOnEvent<E | E2>((en2) => en2 as unknown as E2)
-      .mapLeftOnState<readonly [Si, Si2]>((sin) => sin[1]);
+      .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
+      .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1]);
 
     return viewX.productOnState(viewY);
+  }
+
+  /**
+   * Combines multiple Views into one View.
+   *
+   * Combines state via intersection (So & Son)
+   *
+   */
+  combineAndIntersect<Si2 extends object, So2 extends object, E2>(
+    y: _View<Si2, So2, E2>
+  ): _View<Si & Si2, So & So2, E | E2> {
+    const viewX = this.mapContraOnEvent<E | E2>(
+      (en) => en as unknown as E
+    ).mapContraOnState<Si & Si2>((sin) => sin as Si);
+
+    const viewY = y
+      .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
+      .mapContraOnState<Si & Si2>((sin) => sin as Si2);
+
+    return viewX.productAndIntersectionOnState(viewY);
   }
 }
 
@@ -149,19 +188,39 @@ export interface IView<S, E> {
  *
  * ### Example
  * ```typescript
- * const view: View<number, OddNumberEvt> = new View<number, OddNumberEvt>(
- * (s, e) => {
- *    if (e instanceof OddNumberAddedEvt) {
- *      return s + e.value;
- *    } else if (e instanceof OddNumberMultiplied) {
- *      return s * e.value;
- *    } else {
- *      const _: never = e;
- *      console.log('Never just happened in evolve function: ' + _);
- *      return s;
- *    }
- *  },
- * 0
+ * export const orderView: View<OrderView | null, OrderEvent> = new View<
+ *   OrderView | null,
+ *   OrderEvent
+ * >(
+ *   (currentState, event) => {
+ *     switch (event.kind) {
+ *       case "OrderCreatedEvent":
+ *         return new OrderView(
+ *           event.id,
+ *           event.restaurantId,
+ *           event.menuItems,
+ *           "CREATED",
+ *         );
+ *       case "OrderNotCreatedEvent":
+ *         return currentState;
+ *       case "OrderPreparedEvent":
+ *         return currentState !== null
+ *           ? new OrderView(
+ *             currentState.id,
+ *             currentState.restaurantId,
+ *             currentState.menuItems,
+ *             "PREPARED",
+ *           )
+ *           : currentState;
+ *       case "OrderNotPreparedEvent":
+ *         return currentState;
+ *       default:
+ *         // Exhaustive matching of the event type
+ *         const _: never = event;
+ *         return currentState;
+ *     }
+ *   },
+ *   null,
  * );
  * ```
  *
@@ -171,16 +230,29 @@ export class View<S, E> implements IView<S, E> {
   constructor(readonly evolve: (s: S, e: E) => S, readonly initialState: S) {}
 
   /**
-   * Left map on E/Event parameter
+   * @deprecated This method is deprecated/renamed. Use `mapContraOnEvent` instead.
    *
    * @typeParam En - New Event
    */
   mapLeftOnEvent<En>(f: (en: En) => E): View<S, En> {
-    return asView(new _View(this.evolve, this.initialState).mapLeftOnEvent(f));
+    return asView(
+      new _View(this.evolve, this.initialState).mapContraOnEvent(f)
+    );
   }
 
   /**
-   * Dimap on S/State parameter
+   * Contra (Left) map on E/Event parameter - Contravariant
+   *
+   * @typeParam En - New Event
+   */
+  mapContraOnEvent<En>(f: (en: En) => E): View<S, En> {
+    return asView(
+      new _View(this.evolve, this.initialState).mapContraOnEvent(f)
+    );
+  }
+
+  /**
+   * Dimap on S/State parameter - Profunctor
    *
    * @typeParam Sn - New State
    */
@@ -191,12 +263,40 @@ export class View<S, E> implements IView<S, E> {
   }
 
   /**
-   * Combines Views into one bigger View
+   * Combines Views into one bigger View - Monoid
    *
+   * Combines state via tuple [S, S2]. Check alternative method `combineAndIntersect`
+   *
+   * 1. Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
+   *
+   * 2. Readability: Consider which approach makes your code more readable and understandable to other developers who may be working with your codebase. Choose the approach that best communicates your intentions and the structure of your data.
+   *
+   * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combine<S2, E2>(y: View<S2, E2>): View<readonly [S, S2], E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combine(
+        new _View(y.evolve, y.initialState)
+      )
+    );
+  }
+
+  /**
+   * Combines Views into one bigger View - Monoid
+   *
+   * Combines state via intersection (S & S2). Check alternative method `combine`.
+   *
+   * 1. Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
+   *
+   * 2. Readability: Consider which approach makes your code more readable and understandable to other developers who may be working with your codebase. Choose the approach that best communicates your intentions and the structure of your data.
+   *
+   * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
+   */
+  combineAndIntersect<S2 extends object, E2>(
+    y: View<S2, E2>
+  ): View<S & S2, E | E2> {
+    return asView(
+      new _View(this.evolve, this.initialState).combineAndIntersect(
         new _View(y.evolve, y.initialState)
       )
     );

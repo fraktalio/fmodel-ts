@@ -67,6 +67,50 @@ const view2: View<number, EvenNumberEvt> = new View<number, EvenNumberEvt>(
   0
 );
 
+type OddState = {
+  oddNumber: number;
+};
+const view3: View<OddState, OddNumberEvt> = new View<OddState, OddNumberEvt>(
+  (s, e) => {
+    if (e instanceof OddNumberAddedEvt) {
+      return { oddNumber: s.oddNumber + e.value };
+    } else if (e instanceof OddNumberMultiplied) {
+      return { oddNumber: s.oddNumber * e.value };
+    } else {
+      const _: never = e;
+      console.log('Returning state 1: ' + s);
+      console.log('Never just happened in evolve function decider 1: ' + _);
+      console.log('Returning state 2: ' + s);
+      return { oddNumber: s.oddNumber };
+    }
+  },
+  { oddNumber: 0 }
+);
+
+type EvenState = {
+  evenNumber: number;
+};
+const view4: View<EvenState, EvenNumberEvt> = new View<
+  EvenState,
+  EvenNumberEvt
+>(
+  (s, e) => {
+    console.log('S: ' + s + ', E: ' + e.value);
+    if (e instanceof EvenNumberAddedEvt) {
+      console.log('EvenNumberAddedEvt: ' + e.value);
+      return { evenNumber: s.evenNumber + e.value };
+    } else if (e instanceof EvenNumberMultiplied) {
+      console.log('EvenNumberMultiplied: ' + e);
+      return { evenNumber: s.evenNumber * e.value };
+    } else {
+      const _: never = e;
+      console.log('Never just happened in evolve function in decider 2 ' + _);
+      return { evenNumber: s.evenNumber };
+    }
+  },
+  { evenNumber: 0 }
+);
+
 test('view-evolve', (t) => {
   t.is(view.evolve(1, new OddNumberAddedEvt(1)), 2);
 });
@@ -94,5 +138,23 @@ test('view-combined-evolve2', (t) => {
   t.deepEqual(
     view.combine(view2).evolve([0, 0], new EvenNumberAddedEvt(2)),
     [0, 2]
+  );
+});
+
+test('view-combined-evolve3', (t) => {
+  t.deepEqual(
+    view3
+      .combineAndIntersect(view4)
+      .evolve({ evenNumber: 0, oddNumber: 0 }, new OddNumberAddedEvt(1)),
+    { evenNumber: 0, oddNumber: 1 }
+  );
+});
+
+test('view-combined-evolve4', (t) => {
+  t.deepEqual(
+    view3
+      .combineAndIntersect(view4)
+      .evolve({ evenNumber: 0, oddNumber: 0 }, new EvenNumberAddedEvt(2)),
+    { evenNumber: 2, oddNumber: 0 }
   );
 });

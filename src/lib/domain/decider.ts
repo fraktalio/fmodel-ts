@@ -37,11 +37,11 @@ class _Decider<C, Si, So, Ei, Eo> {
   ) {}
 
   /**
-   * Left map on C/Command parameter - Contravariant
+   * Contra (Left) map on C/Command parameter - Contravariant
    *
    * @typeParam Cn - New Command
    */
-  mapLeftOnCommand<Cn>(f: (cn: Cn) => C): _Decider<Cn, Si, So, Ei, Eo> {
+  mapContraOnCommand<Cn>(f: (cn: Cn) => C): _Decider<Cn, Si, So, Ei, Eo> {
     return new _Decider(
       (cn: Cn, s: Si) => this.decide(f(cn), s),
       (s: Si, e: Ei) => this.evolve(s, e),
@@ -84,7 +84,7 @@ class _Decider<C, Si, So, Ei, Eo> {
   }
 
   /**
-   * Left map on S/State parameter - Contravariant
+   * Contra (Left) map on S/State parameter - Contravariant
    *
    * @typeParam Sin - New input State
    */
@@ -93,7 +93,7 @@ class _Decider<C, Si, So, Ei, Eo> {
   }
 
   /**
-   * Right map on S/State parameter - Covariant
+   * (Right) map on S/State parameter - Covariant
    *
    * @typeParam Son - New output State
    */
@@ -118,6 +118,7 @@ class _Decider<C, Si, So, Ei, Eo> {
 
   /**
    * Right product on S/State parameter - Applicative
+   * Combines state via tuple [So, Son]
    *
    * @typeParam Son - New output State
    */
@@ -128,7 +129,25 @@ class _Decider<C, Si, So, Ei, Eo> {
   }
 
   /**
+   * Right product on S/State parameter - Applicative
+   * Combines state via interception (So & Son)
+   *
+   * @typeParam Son - New output State
+   */
+  productAndIntersectOnState<Son extends object>(
+    fb: _Decider<C, Si, Son, Ei, Eo>
+  ): _Decider<C, Si, So & Son, Ei, Eo> {
+    return this.applyOnState(
+      fb.mapOnState((son: Son) => (so: So) => {
+        return Object.assign({}, so, son);
+      })
+    );
+  }
+
+  /**
    * Combine Deciders into one big Decider
+   *
+   * The States/S are combined via `tuples`
    */
   combine<C2, Si2, So2, Ei2, Eo2>(
     y: _Decider<C2, Si2, So2, Ei2, Eo2>
@@ -139,7 +158,7 @@ class _Decider<C, Si, So, Ei, Eo> {
     Ei | Ei2,
     Eo | Eo2
   > {
-    const deciderX = this.mapLeftOnCommand<C | C2>((c) => c as C)
+    const deciderX = this.mapContraOnCommand<C | C2>((c) => c as C)
       .mapContraOnState<readonly [Si, Si2]>((sin) => sin[0])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei,
@@ -147,7 +166,7 @@ class _Decider<C, Si, So, Ei, Eo> {
       );
 
     const deciderY = y
-      .mapLeftOnCommand<C | C2>((c) => c as C2)
+      .mapContraOnCommand<C | C2>((c) => c as C2)
       .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei2,
@@ -155,6 +174,32 @@ class _Decider<C, Si, So, Ei, Eo> {
       );
 
     return deciderX.productOnState(deciderY);
+  }
+
+  /**
+   * Combine Deciders into one big Decider
+   *
+   * The States/S are combined via `intersections`
+   */
+  combineAndIntersect<C2, Si2 extends object, So2 extends object, Ei2, Eo2>(
+    y: _Decider<C2, Si2, So2, Ei2, Eo2>
+  ): _Decider<C | C2, Si & Si2, So & So2, Ei | Ei2, Eo | Eo2> {
+    const deciderX = this.mapContraOnCommand<C | C2>((c) => c as C)
+      .mapContraOnState<Si & Si2>((sin) => sin as Si)
+      .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
+        (ein) => ein as Ei,
+        (eo) => eo
+      );
+
+    const deciderY = y
+      .mapContraOnCommand<C | C2>((c) => c as C2)
+      .mapContraOnState<Si & Si2>((sin) => sin as Si2)
+      .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
+        (ein) => ein as Ei2,
+        (eo2) => eo2
+      );
+
+    return deciderX.productAndIntersectOnState(deciderY);
   }
 }
 
@@ -201,31 +246,92 @@ export interface IDecider<C, S, E> {
  *
  * @example
  * ```typescript
- * const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<OddNumberCmd, number, OddNumberEvt>(
- * (c, _) => {
- *   if (c instanceof AddOddNumberCmd) {
- *      return [new OddNumberAddedEvt(c.value)];
- *    } else if (c instanceof MultiplyOddNumberCmd) {
- *      return [new OddNumberMultiplied(c.value)];
- *    } else {
- *      const _: never = c;
- *      console.log('Never just happened in decide function: ' + _);
- *      return [];
- *    }
- *  },
- * (s, e) => {
- *    if (e instanceof OddNumberAddedEvt) {
- *      return s + e.value;
- *    } else if (e instanceof OddNumberMultiplied) {
- *      return s * e.value;
- *    } else {
- *      const _: never = e;
- *      console.log('Never just happened in evolve function: ' + _);
- *      return s;
- *    }
- *  },
- * 0
- * );
+ * export const orderDecider: Decider<OrderCommand, Order | null, OrderEvent> =
+ *   new Decider<OrderCommand, Order | null, OrderEvent>(
+ *     (command, currentState) => {
+ *       switch (command.kind) {
+ *         case "CreateOrderCommand":
+ *           return currentState == null
+ *             ? [
+ *               {
+ *                 version: 1,
+ *                 decider: "Order",
+ *                 kind: "OrderCreatedEvent",
+ *                 id: command.id,
+ *                 restaurantId: command.restaurantId,
+ *                 menuItems: command.menuItems,
+ *                 final: false,
+ *               },
+ *             ]
+ *             : [
+ *               {
+ *                 version: 1,
+ *                 decider: "Order",
+ *                 kind: "OrderNotCreatedEvent",
+ *                 id: command.id,
+ *                 restaurantId: command.restaurantId,
+ *                 menuItems: command.menuItems,
+ *                 final: false,
+ *                 reason: "Order already exist!",
+ *               },
+ *             ];
+ *         case "MarkOrderAsPreparedCommand":
+ *           return currentState !== null
+ *             ? [
+ *               {
+ *                 version: 1,
+ *                 decider: "Order",
+ *                 kind: "OrderPreparedEvent",
+ *                 id: currentState.id,
+ *                 final: false,
+ *               },
+ *             ]
+ *             : [
+ *               {
+ *                 version: 1,
+ *                 decider: "Order",
+ *                 kind: "OrderNotPreparedEvent",
+ *                 id: command.id,
+ *                 reason: "Order does not exist!",
+ *                 final: false,
+ *               },
+ *             ];
+ *         default:
+ *           // Exhaustive matching of the command type
+ *           const _: never = command;
+ *           return [];
+ *       }
+ *     },
+ *     (currentState, event) => {
+ *       switch (event.kind) {
+ *         case "OrderCreatedEvent":
+ *           return new Order(
+ *             event.id,
+ *             event.restaurantId,
+ *             event.menuItems,
+ *             "CREATED",
+ *           );
+ *         case "OrderNotCreatedEvent":
+ *           return currentState;
+ *         case "OrderPreparedEvent":
+ *           return currentState !== null
+ *             ? new Order(
+ *               currentState.id,
+ *               currentState.restaurantId,
+ *               currentState.menuItems,
+ *               "PREPARED",
+ *             )
+ *             : currentState;
+ *         case "OrderNotPreparedEvent":
+ *           return currentState;
+ *         default:
+ *           // Exhaustive matching of the event type
+ *           const _: never = event;
+ *           return currentState;
+ *       }
+ *     },
+ *     null,
+ *   );
  * ```
  */
 export class Decider<C, S, E> implements IDecider<C, S, E> {
@@ -236,8 +342,7 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
   ) {}
 
   /**
-   * Left map on C/Command parameter - Contravariant
-   *
+   * @deprecated This method is deprecated/renamed. Use `mapContraOnCommand` instead.   *
    * @typeParam Cn - New Command
    */
   mapLeftOnCommand<Cn>(f: (cn: Cn) => C): Decider<Cn, S, E> {
@@ -246,12 +351,27 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
         this.decide,
         this.evolve,
         this.initialState
-      ).mapLeftOnCommand(f)
+      ).mapContraOnCommand(f)
     );
   }
 
   /**
-   * Dimap on E/Event parameter
+   * Contra (Left) map on C/Command parameter - Contravariant
+   *
+   * @typeParam Cn - New Command
+   */
+  mapContraOnCommand<Cn>(f: (cn: Cn) => C): Decider<Cn, S, E> {
+    return asDecider(
+      new _Decider(
+        this.decide,
+        this.evolve,
+        this.initialState
+      ).mapContraOnCommand(f)
+    );
+  }
+
+  /**
+   * Dimap on E/Event parameter - Profunctor
    *
    * @typeParam En - New Event
    */
@@ -265,7 +385,7 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
   }
 
   /**
-   * Dimap on S/State parameter
+   * Dimap on S/State parameter  - Profunctor
    *
    * @typeParam Sn - New State
    */
@@ -279,7 +399,18 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
   }
 
   /**
-   * Combine Deciders into one Decider
+   * Combine multiple Deciders into one Decider - Monoid
+   *
+   * State/S is combined via `tuples / [S, S2]`. Check alternative method `combineAndIntersect`
+   *
+   * Tuples are more straightforward and may be more suitable for simple cases,
+   * while intersections provide more flexibility and can handle more complex scenarios.
+   *
+   * 1. Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
+   *
+   * 2. Readability: Consider which approach makes your code more readable and understandable to other developers who may be working with your codebase. Choose the approach that best communicates your intentions and the structure of your data.
+   *
+   * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combine<C2, S2, E2>(
     y: Decider<C2, S2, E2>
@@ -288,6 +419,33 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
       new _Decider(this.decide, this.evolve, this.initialState).combine(
         new _Decider(y.decide, y.evolve, y.initialState)
       )
+    );
+  }
+
+  /**
+   * Combine multiple Deciders into one Decider  - Monoid
+   *
+   * State/S is combined via `intersection / (S & S2)`. It only make sense if S ans S2 are objects, not primitives.
+   * Check alternative method `combine`
+   *
+   * Intersections provide more flexibility and can handle more complex scenarios,
+   * while tuples are more straightforward and may be more suitable for simple cases.
+   *
+   * Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
+   *
+   * Readability: Consider which approach makes your code more readable and understandable to other developers who may be working with your codebase. Choose the approach that best communicates your intentions and the structure of your data.
+   *
+   * Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
+   */
+  combineAndIntersect<C2, S2 extends object, E2>(
+    y: Decider<C2, S2, E2>
+  ): Decider<C | C2, S & S2, E | E2> {
+    return asDecider(
+      new _Decider(
+        this.decide,
+        this.evolve,
+        this.initialState
+      ).combineAndIntersect(new _Decider(y.decide, y.evolve, y.initialState))
     );
   }
 }
