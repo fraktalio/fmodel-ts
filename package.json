@@ -1,6 +1,6 @@
 {
   "name": "@fraktalio/fmodel-ts",
-  "version": "1.4.1",
+  "version": "2.0.0",
   "description": "Functional domain modeling with TypeScript. Optimized for event sourcing and CQRS",
   "main": "build/main/index.js",
   "typings": "build/main/index.d.ts",
@@ -8,7 +8,7 @@
   "repository": "https://github.com/fraktalio/fmodel-ts",
   "license": "Apache License, Version 2.0",
   "keywords": [
-    "DDD",
+    "Domain Modeling",
     "Eventsourcing",
     "CQRS",
     "Functional"
