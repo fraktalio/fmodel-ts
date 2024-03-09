@@ -16,6 +16,29 @@
 import { ISaga } from '../domain/saga';
 
 /**
+ * Action publisher interface
+ *
+ * Used by [SagaManager]
+ *
+ * @typeParam A - Action
+ * @typeParam ARM - Action Result Metadata
+ * @typeParam AM - Action Metadata
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IActionPublisher<A, ARM, AM> {
+  /**
+   * Publish actions
+   *
+   * @param actions - of Actions with Action Result Metadata of type `A & ARM`
+   * @return list of newly published Actions with Action Metadata of type `A & AM`
+   */
+  readonly publish: (
+    actions: readonly (A & ARM)[]
+  ) => Promise<readonly (A & AM)[]>;
+}
+
+/**
  * Saga manager interface - Stateless process orchestrator.
  *
  * It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
@@ -58,8 +81,8 @@ export class SagaManager<AR, A, ARM, AM>
     protected readonly actionPublisher: IActionPublisher<A, ARM, AM>
   ) {}
 
-  react(ar: AR): readonly A[] {
-    return this.saga.react(ar);
+  react(actionResult: AR): readonly A[] {
+    return this.saga.react(actionResult);
   }
 
   async publish(actions: readonly (A & ARM)[]): Promise<readonly (A & AM)[]> {
@@ -78,27 +101,4 @@ export class SagaManager<AR, A, ARM, AM>
       actions.map((a: A) => ({ ...a, ...(actionResult as ARM) }))
     );
   }
-}
-
-/**
- * Action publisher interface
- *
- * Used by [SagaManager]
- *
- * @typeParam A - Action
- * @typeParam ARM - Action Result Metadata
- * @typeParam AM - Action Metadata
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface IActionPublisher<A, ARM, AM> {
-  /**
-   * Publish actions
-   *
-   * @param actions - of Actions with Action Result Metadata of type `A`
-   * @return list of newly published Actions with Action Metadata of type `A & AM`
-   */
-  readonly publish: (
-    actions: readonly (A & ARM)[]
-  ) => Promise<readonly (A & AM)[]>;
 }

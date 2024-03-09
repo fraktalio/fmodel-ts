@@ -17,7 +17,7 @@ import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
 
 /**
- * State repository interface
+ * State repository interface / fetching and storing the state from/to storage
  *
  * @typeParam C - Command
  * @typeParam S - State
@@ -31,21 +31,21 @@ export interface IStateRepository<C, S, V, CM, SM> {
   /**
    * Fetch state, version and metadata
    *
-   * @param c - Command of type `C`
-   * @return the pair of current State/[S], Version/[V] and State Metadata/[SM]
+   * @param command - Command payload
+   * @return current State/[S], Version/[V] and State Metadata/[SM]
    */
-  readonly fetch: (c: C) => Promise<(S & V & SM) | null>;
+  readonly fetch: (command: C) => Promise<(S & V & SM) | null>;
 
   /**
-   * Save state
+   * Save state (with optimistic locking)
    *
    * You can update/save the item/state, but only if the `version` number in the storage has not changed.
    *
-   * @param s - State with metadata of type `S & CM`
-   * @param v The current version of the state
+   * @param state - State with Command Metadata of type `S & CM`
+   * @param version - The current version of the state
    * @return newly saved State of type `S & V & SM`
    */
-  readonly save: (s: S & CM, v: V | null) => Promise<S & V & SM>;
+  readonly save: (state: S & CM, version: V | null) => Promise<S & V & SM>;
 }
 
 /**
@@ -100,11 +100,11 @@ export abstract class StateComputation<C, S, E> implements IDecider<C, S, E> {
   protected constructor(protected readonly decider: IDecider<C, S, E>) {
     this.initialState = decider.initialState;
   }
-  decide(c: C, s: S): readonly E[] {
-    return this.decider.decide(c, s);
+  decide(command: C, state: S): readonly E[] {
+    return this.decider.decide(command, state);
   }
-  evolve(s: S, e: E): S {
-    return this.decider.evolve(s, e);
+  evolve(state: S, event: E): S {
+    return this.decider.evolve(state, event);
   }
 
   readonly initialState: S;
@@ -132,16 +132,16 @@ export abstract class StateOrchestratingComputation<C, S, E>
   ) {
     super(decider);
   }
-  react(ar: E): readonly C[] {
-    return this.saga.react(ar);
+  react(event: E): readonly C[] {
+    return this.saga.react(event);
   }
   protected override computeNewState(state: S, command: C): S {
     const events = this.decider.decide(command, state);
     // eslint-disable-next-line functional/no-let
     let newState = events.reduce(this.decider.evolve, state);
     events
-      .flatMap((it) => this.saga.react(it))
-      .forEach((c) => (newState = this.computeNewState(newState, c)));
+      .flatMap((evt) => this.saga.react(evt))
+      .forEach((cmd) => (newState = this.computeNewState(newState, cmd)));
     return newState;
   }
 }
@@ -171,12 +171,12 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
   ) {
     super(decider);
   }
-  async fetch(c: C): Promise<(S & V & SM) | null> {
-    return this.stateRepository.fetch(c);
+  async fetch(command: C): Promise<(S & V & SM) | null> {
+    return this.stateRepository.fetch(command);
   }
 
-  async save(s: S & CM, v: V | null): Promise<S & V & SM> {
-    return this.stateRepository.save(s, v);
+  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
+    return this.stateRepository.save(state, version);
   }
 
   async handle(command: C & CM): Promise<S & V & SM> {
@@ -220,12 +220,12 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
     super(decider, saga);
   }
 
-  async fetch(c: C): Promise<(S & V & SM) | null> {
-    return this.stateRepository.fetch(c);
+  async fetch(command: C): Promise<(S & V & SM) | null> {
+    return this.stateRepository.fetch(command);
   }
 
-  async save(s: S & CM, v: V | null): Promise<S & V & SM> {
-    return this.stateRepository.save(s, v);
+  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
+    return this.stateRepository.save(state, version);
   }
 
   async handle(command: C & CM): Promise<S & V & SM> {

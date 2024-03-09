@@ -29,19 +29,19 @@ export interface IViewStateRepository<E, S, V, EM> {
   /**
    * Fetch state
    *
-   * @param e - Event of type `E` with metadata of type `EM`
+   * @param event - Event of type `E` with metadata of type `EM`
    *
    * @return current state / `S` with version / `V`, or NULL
    */
-  readonly fetch: (e: E) => Promise<(S & V) | null>;
+  readonly fetch: (event: E) => Promise<(S & V) | null>;
   /**
    * Save state
    *
-   * @param s - State and Event Metadata of type `S & EM`
-   * @param v - State version of type `V | null`
+   * @param state - State and Event Metadata of type `S & EM`
+   * @param version - State version of type `V | null`
    * @return newly saved State and Version of type `S` & `V`
    */
-  readonly save: (s: S & EM, v: V | null) => Promise<S & V>;
+  readonly save: (state: S & EM, version: V | null) => Promise<S & V>;
 }
 
 /**
@@ -89,16 +89,16 @@ export class MaterializedView<S, E, V, EM>
   }
 
   readonly initialState: S;
-  evolve(s: S, e: E): S {
-    return this.view.evolve(s, e);
+  evolve(state: S, event: E): S {
+    return this.view.evolve(state, event);
   }
 
-  async fetch(e: E): Promise<(S & V) | null> {
-    return this.viewStateRepository.fetch(e);
+  async fetch(event: E): Promise<(S & V) | null> {
+    return this.viewStateRepository.fetch(event);
   }
 
-  async save(s: S & EM, v: V | null): Promise<S & V> {
-    return this.viewStateRepository.save(s, v);
+  async save(state: S & EM, version: V | null): Promise<S & V> {
+    return this.viewStateRepository.save(state, version);
   }
 
   async handle(event: E & EM): Promise<S & V> {
