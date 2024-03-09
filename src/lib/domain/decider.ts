@@ -342,20 +342,6 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
   ) {}
 
   /**
-   * @deprecated This method is deprecated/renamed. Use `mapContraOnCommand` instead.   *
-   * @typeParam Cn - New Command
-   */
-  mapLeftOnCommand<Cn>(f: (cn: Cn) => C): Decider<Cn, S, E> {
-    return asDecider(
-      new _Decider(
-        this.decide,
-        this.evolve,
-        this.initialState
-      ).mapContraOnCommand(f)
-    );
-  }
-
-  /**
    * Contra (Left) map on C/Command parameter - Contravariant
    *
    * @typeParam Cn - New Command

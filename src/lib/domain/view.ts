@@ -230,17 +230,6 @@ export class View<S, E> implements IView<S, E> {
   constructor(readonly evolve: (s: S, e: E) => S, readonly initialState: S) {}
 
   /**
-   * @deprecated This method is deprecated/renamed. Use `mapContraOnEvent` instead.
-   *
-   * @typeParam En - New Event
-   */
-  mapLeftOnEvent<En>(f: (en: En) => E): View<S, En> {
-    return asView(
-      new _View(this.evolve, this.initialState).mapContraOnEvent(f)
-    );
-  }
-
-  /**
    * Contra (Left) map on E/Event parameter - Contravariant
    *
    * @typeParam En - New Event

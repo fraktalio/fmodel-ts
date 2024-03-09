@@ -47,7 +47,7 @@ export class Saga<AR, A> implements ISaga<AR, A> {
    *
    * @typeParam ARn - New Action Result
    */
-  mapLeftOnActionResult<ARn>(f: (arn: ARn) => AR): Saga<ARn, A> {
+  mapContraOnActionResult<ARn>(f: (arn: ARn) => AR): Saga<ARn, A> {
     return new Saga((arn: ARn) => this.react(f(arn)));
   }
 
@@ -66,12 +66,12 @@ export class Saga<AR, A> implements ISaga<AR, A> {
    * @param y - second Saga
    */
   combine<AR2, A2>(y: Saga<AR2, A2>): Saga<AR | AR2, A | A2> {
-    const sagaX = this.mapLeftOnActionResult<AR | AR2>(
+    const sagaX = this.mapContraOnActionResult<AR | AR2>(
       (en) => en as AR
     ).mapOnAction<A | A2>(identity);
 
     const sagaY = y
-      .mapLeftOnActionResult<AR | AR2>((en) => en as AR2)
+      .mapContraOnActionResult<AR | AR2>((en) => en as AR2)
       .mapOnAction<A | A2>(identity);
 
     return new Saga<AR | AR2, A | A2>((ar: AR | AR2) =>
