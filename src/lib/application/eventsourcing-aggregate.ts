@@ -19,9 +19,11 @@ import { ISaga } from '../domain/saga';
 /**
  * Event repository interface
  *
- * @param C - Command
- * @param E - Event
- * @param V - Version
+ * @typeParam C - Command
+ * @typeParam E - Event
+ * @typeParam V - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam EM - Event Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -31,24 +33,28 @@ export interface IEventRepository<C, E, V, CM, EM> {
    *
    * @param c - Command of type `C`
    *
-   * @return list of pairs of Event and Version
+   * @return list of Events with Version and Event Metadata
    */
   readonly fetch: (c: C) => Promise<readonly (E & V & EM)[]>;
 
   /**
-   * The latest event stream version provider
+   * Get the latest event stream version / sequence
+   *
+   * @param e - Event of type `E`
+   *
+   * @return the latest version / sequence of the event stream that this event belongs to.
    */
   readonly versionProvider: (e: E) => Promise<V | null>;
 
   /**
    * Save events
    *
-   * @param eList - list of Events of type `E`
-   * @param latestVersionProvider - A provider for the Latest Event in this stream and its Version
-   * @return  a list of pairs of newly saved Event of type `E` and its Version of type `V`
+   * @param events - list of Events with Command Metadata
+   * @param versionProvider - A provider for the Latest Event in this stream and its Version/Sequence
+   * @return  a list of newly saved Event(s) of type `E` with Version of type `V` and with Event Metadata of type `EM`
    */
   readonly save: (
-    eList: readonly (E & CM)[],
+    events: readonly (E & CM)[],
     versionProvider: (e: E) => Promise<V | null>
   ) => Promise<readonly (E & V & EM)[]>;
 }
@@ -63,6 +69,8 @@ export interface IEventRepository<C, E, V, CM, EM> {
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam EM - Event Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -72,8 +80,8 @@ export interface IEventSourcingAggregate<C, S, E, V, CM, EM>
   /**
    * Handles the command of type `C`, and returns new persisted list of pairs of event and its version.
    *
-   * @param command - Command of type `C`
-   * @return list of persisted events ot type (`E` & `V` & `EM`)
+   * @param command - Command of type `C` with Command Metadata
+   * @return list of persisted events with Version and Event Metadata
    */
   readonly handle: (command: C & CM) => Promise<readonly (E & V & EM)[]>;
 }
@@ -90,6 +98,8 @@ export interface IEventSourcingAggregate<C, S, E, V, CM, EM>
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam EM - Event Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -152,7 +162,7 @@ export abstract class EventOrchestratingComputation<C, S, E>
     return this.saga.react(ar);
   }
 
-  private computeNewEventsInternal(
+  private computeNewEventsInternally(
     events: readonly E[],
     command: C
   ): readonly E[] {
@@ -169,7 +179,7 @@ export abstract class EventOrchestratingComputation<C, S, E>
     fetch: (c: C) => Promise<readonly E[]>
   ): Promise<readonly E[]> {
     // eslint-disable-next-line functional/no-let
-    let resultingEvents = this.computeNewEventsInternal(events, command);
+    let resultingEvents = this.computeNewEventsInternally(events, command);
     await asyncForEach(
       resultingEvents.flatMap((it) => this.saga.react(it)),
       async (c) => {
@@ -187,15 +197,17 @@ export abstract class EventOrchestratingComputation<C, S, E>
 
 /**
  * Event sourcing aggregate is using/delegating a `EventSourcingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
- * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingAggregate.decider` which can produce new event(s) as a result.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `IEventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingAggregate.decider` which can produce new event(s) as a result.
  *
  *
- * Produced events are then stored via `EventRepository.save` function.
+ * Produced events are then stored via `IEventRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam E - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam EM - Event Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -219,10 +231,10 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
   }
 
   async save(
-    eList: readonly (E & CM)[],
+    events: readonly (E & CM)[],
     versionProvider: (e: E) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(eList, versionProvider);
+    return this.eventRepository.save(events, versionProvider);
   }
 
   async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
@@ -240,16 +252,18 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
 
 /**
  * Event sourcing orchestrating aggregate is using/delegating a `EventSourcingOrchestratingAggregate.decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce events.
- * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `EventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingOrchestratingAggregate.decider` which can produce new event(s) as a result.
+ * In order to handle the command, aggregate needs to fetch the current state (represented as a list of events) via `IEventRepository.fetchEvents` function, and then delegate the command to the `EventSourcingOrchestratingAggregate.decider` which can produce new event(s) as a result.
  *
  * If the `EventSourcingOrchestratingAggregate.decider` is combined out of many deciders via `combine` function, an optional `EventSourcingOrchestratingAggregate.saga` could be used to react on new events and send new commands to the `EventSourcingOrchestratingAggregate.decider` recursively, in one transaction.
  *
- * Produced events are then stored via `EventRepository.save` function.
+ * Produced events are then stored via `IEventRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam EM - Event Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
@@ -274,10 +288,10 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
   }
 
   async save(
-    eList: readonly (E & CM)[],
+    events: readonly (E & CM)[],
     versionProvider: (e: E) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(eList, versionProvider);
+    return this.eventRepository.save(events, versionProvider);
   }
 
   async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
