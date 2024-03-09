@@ -96,12 +96,12 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
           return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
         case 'MultiplyEvenNumberCmd':
           return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
-        default:
+        default: {
           // Exhaustive matching of the command type
-          // eslint-disable-next-line no-case-declarations
           const _: never = c;
           console.log('Never just happened in decide function: ' + _);
           return [];
+        }
       }
     },
     (s, e) => {
@@ -110,12 +110,12 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
           return { evenNumber: s.evenNumber + e.value };
         case 'EvenNumberMultipliedEvt':
           return { evenNumber: s.evenNumber * e.value };
-        default:
-          // Exhaustive matching of the command type
-          // eslint-disable-next-line no-case-declarations
+        default: {
+          // Exhaustive matching of the event type
           const _: never = e;
           console.log('Never just happened in evolve function: ' + _);
           return { evenNumber: s.evenNumber };
+        }
       }
     },
     { evenNumber: 0 }
@@ -133,12 +133,12 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
         return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
       case 'MultiplyOddNumberCmd':
         return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
-      default:
+      default: {
         // Exhaustive matching of the command type
-        // eslint-disable-next-line no-case-declarations
         const _: never = c;
         console.log('Never just happened in decide function: ' + _);
         return [];
+      }
     }
   },
   (s, e) => {
@@ -147,12 +147,12 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
         return { oddNumber: s.oddNumber + e.value };
       case 'OddNumberMultipliedEvt':
         return { oddNumber: s.oddNumber * e.value };
-      default:
-        // Exhaustive matching of the command type
-        // eslint-disable-next-line no-case-declarations
+      default: {
+        // Exhaustive matching of the event type
         const _: never = e;
         console.log('Never just happened in evolve function: ' + _);
         return { oddNumber: s.oddNumber };
+      }
     }
   },
   { oddNumber: 0 }
