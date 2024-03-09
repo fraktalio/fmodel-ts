@@ -11,102 +11,138 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-classes,@typescript-eslint/no-explicit-any */
+/* eslint-disable functional/no-classes*/
 import test from 'ava';
 
 import { Saga } from '../domain/saga';
 
-import { ActionPublisher, ISagaManager, SagaManager } from './saga-manager';
+import { IActionPublisher, ISagaManager, SagaManager } from './saga-manager';
 
-function isNumber(x: any): x is number {
-  return typeof x === 'number';
-}
+// ################################
+// ###### Domain - Commands #######
+// ################################
 
-function isString(x: any): x is string {
-  return typeof x === 'string';
-}
+type AddOddNumberCmd = {
+  readonly kindOfCommand: 'AddOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-const saga: Saga<number, number> = new Saga<number, number>((ar) => {
-  if (isNumber(ar)) {
-    return [ar];
-  } else {
-    return [];
+type MultiplyOddNumberCmd = {
+  readonly kindOfCommand: 'MultiplyOddNumberCmd';
+  readonly valueOfCommand: number;
+};
+
+type AddEvenNumberCmd = {
+  readonly kindOfCommand: 'AddEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
+
+type MultiplyEvenNumberCmd = {
+  readonly kindOfCommand: 'MultiplyEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
+
+// Type that represents all the Odd numbers commands
+type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
+// Type that represents all the Even numbers commands
+type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
+
+// ################################
+// ###### Domain - Events #########
+// ################################
+
+type OddNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberAddedEvt';
+};
+
+type OddNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberMultipliedEvt';
+};
+
+type EvenNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberAddedEvt';
+};
+
+type EvenNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberMultipliedEvt';
+};
+
+// Type that represents all the Odd numbers events
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+// Type that represents all the Even numbers events
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
+
+type Action = EvenNumberCmd | OddNumberCmd;
+type ActionResult = EvenNumberEvt | OddNumberEvt;
+
+// Saga for Even numbers only
+const evenSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
+  OddNumberEvt,
+  EvenNumberCmd
+>((ar) => {
+  switch (ar.kind) {
+    case 'OddNumberAddedEvt':
+      return [
+        { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: ar.value + 1 },
+      ];
+    case 'OddNumberMultipliedEvt':
+      return [
+        {
+          kindOfCommand: 'MultiplyEvenNumberCmd',
+          valueOfCommand: ar.value + 1,
+        },
+      ];
+    default: {
+      // Exhaustive matching of the Action Result type
+      const _: never = ar;
+      console.log('Never just happened in react function: ' + _);
+      return [];
+    }
   }
 });
 
-const saga2: Saga<string, string> = new Saga<string, string>((ar) => {
-  if (isString(ar)) {
-    return [ar];
-  } else {
-    return [];
-  }
+// Saga for Odd numbers only
+const oddSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
+  EvenNumberEvt,
+  OddNumberCmd
+>(() => {
+  //This Saga is not doing much ;)
+  return [];
 });
 
-class ActionPublisherImpl implements ActionPublisher<number> {
-  async publish(a: number): Promise<number> {
-    return a;
-  }
-
-  async publishAll(aList: readonly number[]): Promise<readonly number[]> {
-    return aList;
-  }
-}
-const actionPublisher: ActionPublisher<number> = new ActionPublisherImpl();
-
-class ActionPublisherImpl2 implements ActionPublisher<string> {
-  async publish(a: string): Promise<string> {
-    return a;
-  }
-
-  async publishAll(aList: readonly string[]): Promise<readonly string[]> {
-    return aList;
+class ActionPublisherImpl
+  implements IActionPublisher<Action, ActionResult, Action>
+{
+  async publish(
+    actions: readonly (Action & ActionResult)[]
+  ): Promise<readonly Action[]> {
+    return actions.map((a) => ({
+      kindOfCommand: a.kindOfCommand,
+      valueOfCommand: a.valueOfCommand,
+    }));
   }
 }
-const actionPublisher2: ActionPublisher<string> = new ActionPublisherImpl2();
+const actionPublisher: IActionPublisher<Action, ActionResult, Action> =
+  new ActionPublisherImpl();
 
-const sagaManager: ISagaManager<number, number> = new SagaManager<
-  number,
-  number
->(saga, actionPublisher);
-
-const sagaManager2: ISagaManager<string, string> = new SagaManager<
-  string,
-  string
->(saga2, actionPublisher2);
-
-class ActionPublisherImpl3 implements ActionPublisher<string | number> {
-  async publish(a: string | number): Promise<string | number> {
-    return a;
-  }
-
-  async publishAll(
-    aList: readonly (string | number)[]
-  ): Promise<readonly (string | number)[]> {
-    return aList;
-  }
-}
-
-const actionPublisher3: ActionPublisher<string | number> =
-  new ActionPublisherImpl3();
-
-const sagaManager3: ISagaManager<string | number, string | number> =
-  new SagaManager<string | number, string | number>(
-    saga.combine(saga2),
-    actionPublisher3
+const sagaManager: ISagaManager<ActionResult, Action, ActionResult, Action> =
+  new SagaManager<ActionResult, Action, ActionResult, Action>(
+    evenSaga.combine(oddSaga),
+    actionPublisher
   );
 
 test('saga-handle', async (t) => {
-  t.deepEqual(await sagaManager.handle(1), [1]);
-});
-
-test('saga2-handle', async (t) => {
-  t.deepEqual(await sagaManager2.handle('Yin'), ['Yin']);
-});
-
-test('saga3-handle', async (t) => {
-  t.deepEqual(await sagaManager3.handle('Yin'), ['Yin']);
-});
-
-test('saga4-handle', async (t) => {
-  t.deepEqual(await sagaManager3.handle(1), [1]);
+  t.deepEqual(
+    await sagaManager.handle({ kind: 'OddNumberMultipliedEvt', value: 1 }),
+    [
+      {
+        kindOfCommand: 'MultiplyEvenNumberCmd',
+        valueOfCommand: 2,
+      },
+    ]
+  );
 });
