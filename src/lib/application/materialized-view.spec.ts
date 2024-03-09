@@ -118,7 +118,7 @@ let storage: (ViewState & Version) | null = null;
 class ViewStateRepositoryImpl
   implements IViewStateRepository<Event, ViewState, Version, Event>
 {
-  async fetchState(_e: Event): Promise<(ViewState & Version) | null> {
+  async fetch(_e: Event): Promise<(ViewState & Version) | null> {
     return storage;
   }
   async save(
