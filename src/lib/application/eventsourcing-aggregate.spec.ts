@@ -119,7 +119,7 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
         case 'EvenNumberMultipliedEvt':
           return { evenNumber: s.evenNumber * e.value };
         default:
-          // Exhaustive matching of the command type
+          // Exhaustive matching of the event type
           // eslint-disable-next-line no-case-declarations
           const _: never = e;
           console.log('Never just happened in evolve function: ' + _);
@@ -155,7 +155,7 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
       case 'OddNumberMultipliedEvt':
         return { oddNumber: s.oddNumber * e.value };
       default:
-        // Exhaustive matching of the command type
+        // Exhaustive matching of the event type
         // eslint-disable-next-line no-case-declarations
         const _: never = e;
         console.log('Never just happened in evolve function: ' + _);
@@ -189,7 +189,7 @@ const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
         },
       ];
     default:
-      // Exhaustive matching of the command type
+      // Exhaustive matching of the event type
       // eslint-disable-next-line no-case-declarations
       const _: never = ar;
       console.log('Never just happened in saga react function: ' + _);

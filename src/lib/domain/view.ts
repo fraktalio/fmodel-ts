@@ -113,7 +113,7 @@ class _View<Si, So, E> {
     fb: _View<Si, Son, E>
   ): _View<Si, So & Son, E> {
     return this.applyOnState(
-      fb.mapOnState((b: Son) => (a: So) => ({ ...a, ...b }))
+      fb.mapOnState((b: Son) => (a: So) => ({ ...(a as So), ...(b as Son) }))
     );
   }
 
@@ -148,11 +148,11 @@ class _View<Si, So, E> {
   ): _View<Si & Si2, So & So2, E | E2> {
     const viewX = this.mapContraOnEvent<E | E2>(
       (en) => en as unknown as E
-    ).mapContraOnState<Si & Si2>((sin) => sin as Si);
+    ).mapContraOnState<Si & Si2>((sin) => sin);
 
     const viewY = y
       .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
-      .mapContraOnState<Si & Si2>((sin) => sin as Si2);
+      .mapContraOnState<Si & Si2>((sin) => sin);
 
     return viewX.productAndIntersectionOnState(viewY);
   }
