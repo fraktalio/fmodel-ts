@@ -176,7 +176,322 @@ It is reacting on Action Results of type `AR` and produces new actions `A` based
 Saga manager is using/delegating a `Saga` to react on Action Results of type `AR` and produce new actions `A` which are
 going to be published via `ActionPublisher.publish` function.
 
-## Install
+## Algebraic Data Types
+
+> TypeScript adopts a structural type system which determines type compatibility and equivalence based on the type structure or definition rather than the declarative relationship between types and interfaces, which contrasts with nominal type system.
+
+In TypeScript, we can use ADTs to model our application's domain entities and relationships in a functional way, clearly defining the set of possible values and states.
+TypeScript has two main types of ADTs: union types (`"|"` operator), intersection types (`"&"` operator), tuples and records
+
+- `union types` is used to define a type that can take on one of several possible variants - modeling a `sum/OR` type.
+- `intersection types`, `tuples` and `records` are used to combines several types into one - modeling a `product/AND` type.
+
+ADTs will help with
+
+- representing the business domain in the code accurately
+- enforcing correctness
+- reducing the likelihood of bugs.
+
+In FModel, we extensively use ADTs to model the data.
+
+### `C` / Command / Intent to change the state of the system
+
+```typescript
+// Be precise and explicit about the types
+export type SchemaVersion = number;
+export type RestaurantId = string;
+export type OrderId = string;
+export type MenuItemId = string;
+export type RestaurantName = string;
+export type RestaurantMenuId = string;
+export type MenuItemName = string;
+export type MenuItemPrice = string;
+```
+```typescript
+export type Command = RestaurantCommand | OrderCommand;
+
+export type RestaurantCommand =
+  | CreateRestaurantCommand
+  | ChangeRestaurantMenuCommand
+  | PlaceOrderCommand;
+
+export type CreateRestaurantCommand = {
+  readonly decider: "Restaurant";
+  readonly kind: "CreateRestaurantCommand";
+  readonly id: RestaurantId;
+  readonly name: RestaurantName;
+  readonly menu: RestaurantMenu;
+};
+
+export type ChangeRestaurantMenuCommand = {
+  readonly decider: "Restaurant";
+  readonly kind: "ChangeRestaurantMenuCommand";
+  readonly id: RestaurantId;
+  readonly menu: RestaurantMenu;
+};
+
+export type PlaceOrderCommand = {
+  readonly decider: "Restaurant";
+  readonly kind: "PlaceOrderCommand";
+  readonly id: RestaurantId;
+  readonly orderId: OrderId;
+  readonly menuItems: MenuItem[];
+};
+```
+
+### `E` / Event / Fact
+
+```typescript
+export type Event = RestaurantEvent | OrderEvent;
+
+export type RestaurantEvent =
+  | RestaurantCreatedEvent
+  | RestaurantNotCreatedEvent
+  | RestaurantMenuChangedEvent
+  | RestaurantMenuNotChangedEvent
+  | RestaurantOrderPlacedEvent
+  | RestaurantOrderNotPlacedEvent;
+
+export type RestaurantCreatedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantCreatedEvent";
+  readonly id: RestaurantId;
+  readonly name: RestaurantName;
+  readonly menu: RestaurantMenu;
+  readonly final: boolean;
+};
+
+export type RestaurantNotCreatedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantNotCreatedEvent";
+  readonly id: RestaurantId;
+  readonly name: RestaurantName;
+  readonly menu: RestaurantMenu;
+  readonly reason: Reason;
+  readonly final: boolean;
+};
+
+export type RestaurantMenuChangedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantMenuChangedEvent";
+  readonly id: RestaurantId;
+  readonly menu: RestaurantMenu;
+  readonly final: boolean;
+};
+
+export type RestaurantMenuNotChangedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantMenuNotChangedEvent";
+  readonly id: RestaurantId;
+  readonly menu: RestaurantMenu;
+  readonly reason: Reason;
+  readonly final: boolean;
+};
+
+export type RestaurantOrderPlacedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantOrderPlacedEvent";
+  readonly id: RestaurantId;
+  readonly orderId: OrderId;
+  readonly menuItems: MenuItem[];
+  readonly final: boolean;
+};
+
+export type RestaurantOrderNotPlacedEvent = {
+  readonly version: SchemaVersion;
+  readonly decider: "Restaurant";
+  readonly kind: "RestaurantOrderNotPlacedEvent";
+  readonly id: RestaurantId;
+  readonly orderId: OrderId;
+  readonly menuItems: MenuItem[];
+  readonly reason: Reason;
+  readonly final: boolean;
+};
+```
+### `S` / State / Current state of the system/aggregate/entity
+
+```typescript
+/**
+ * Restaurant state / a data class that holds the current state of the Restaurant
+ */
+export class Restaurant {
+  constructor(
+    readonly id: RestaurantId,
+    readonly name: RestaurantName,
+    readonly menu: RestaurantMenu,
+  ) {
+  }
+}
+```
+
+## Modeling the Behaviour of our domain
+
+- algebraic data types form the structure of our entities (commands, state, and events).
+- functions/lambda offers the algebra of manipulating the entities in a compositional manner, effectively modeling the behavior.
+
+This leads to modularity in design and a clear separation of the entity’s structure and functions/behaviour of the entity.
+
+Fmodel library offers generic and abstract components to specialize in for your specific case/expected behavior:
+
+#### Decider - data type that represents the main decision-making algorithm.
+
+```typescript
+export const restaurantDecider: Decider<
+  RestaurantCommand,
+  Restaurant | null,
+  RestaurantEvent
+> = new Decider<RestaurantCommand, Restaurant | null, RestaurantEvent>(
+  (command, currentState) => {
+    switch (command.kind) {
+      case "CreateRestaurantCommand":
+        return currentState == null
+          ? [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantCreatedEvent",
+              id: command.id,
+              name: command.name,
+              menu: command.menu,
+              final: false,
+            },
+          ]
+          : [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantNotCreatedEvent",
+              id: command.id,
+              name: command.name,
+              menu: command.menu,
+              reason: "Restaurant already exist!",
+              final: false,
+            },
+          ];
+      case "ChangeRestaurantMenuCommand":
+        return currentState !== null
+          ? [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantMenuChangedEvent",
+              id: currentState.id,
+              menu: command.menu,
+              final: false,
+            },
+          ]
+          : [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantMenuNotChangedEvent",
+              id: command.id,
+              menu: command.menu,
+              reason: "Restaurant does not exist!",
+              final: false,
+            },
+          ];
+      case "PlaceOrderCommand":
+        return currentState !== null
+          ? [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantOrderPlacedEvent",
+              id: command.id,
+              orderId: command.orderId,
+              menuItems: command.menuItems,
+              final: false,
+            },
+          ]
+          : [
+            {
+              version: 1,
+              decider: "Restaurant",
+              kind: "RestaurantOrderNotPlacedEvent",
+              id: command.id,
+              orderId: command.orderId,
+              menuItems: command.menuItems,
+              reason: "Restaurant does not exist!",
+              final: false,
+            },
+          ];
+      default:
+        // Exhaustive matching of the command type
+        const _: never = command;
+        return [];
+    }
+  },
+  (currentState, event) => {
+    switch (event.kind) {
+      case "RestaurantCreatedEvent":
+        return new Restaurant(event.id, event.name, event.menu);
+      case "RestaurantNotCreatedEvent":
+        return currentState;
+      case "RestaurantMenuChangedEvent":
+        return currentState !== null
+          ? new Restaurant(currentState.id, currentState.name, event.menu)
+          : currentState;
+      case "RestaurantMenuNotChangedEvent":
+        return currentState;
+      case "RestaurantOrderPlacedEvent":
+        return currentState;
+      case "RestaurantOrderNotPlacedEvent":
+        return currentState;
+      default:
+        // Exhaustive matching of the event type
+        const _: never = event;
+        return currentState;
+    }
+  },
+  null,
+);
+```
+
+The logic execution will be orchestrated by the outside components that use the domain components (decider, view) to do the computations. These components will be responsible for fetching and saving the data (repositories).
+
+
+The arrows in the image (adapters->application->domain) show the direction of the dependency. Notice that all dependencies point inward and that Domain does not depend on anybody or anything.
+
+Pushing these decisions from the core domain model is very valuable. Being able to postpone them is a sign of good architecture.
+
+#### Event-sourcing aggregate
+
+```typescript
+/**
+ * An aggregate that handles the command and produces new events / A convenient type alias for the Fmodel's `EventSourcingAggregate`
+ */
+export type ApplicationAggregate = EventSourcingAggregate<
+  Command,
+  Restaurant & Order,
+  Event,
+  StreamVersion,
+  CommandMetadata,
+  EventMetadata
+>;
+
+// Parse the command from the request
+const command: Command = JSON.parse(await req.json());
+console.log("Handling command: ", command);
+// We can combine deciders to create a new decider that can handle both restaurant and order commands
+const decider = restaurantDecider.combineAndIntersect(orderDecider);
+// Create a repository for the events of all types
+const eventRepository = new EventRepository(supabaseClient);
+// Create an aggregate to handle the commands of all types!
+const aggregate: ApplicationAggregate = new EventSourcingLockingAggregate(
+  decider,
+  eventRepository,
+);
+
+// Handle the command
+const result = await aggregate.handle(command);
+```
+## Install as a dependency of your project
 
 ```shell
 npm i @fraktalio/fmodel-ts
