@@ -23,7 +23,7 @@
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export interface ISaga<AR, A> {
-  readonly react: (ar: AR) => readonly A[];
+  readonly react: (actionResult: AR) => readonly A[];
 }
 
 /**
@@ -40,7 +40,7 @@ export class Saga<AR, A> implements ISaga<AR, A> {
    * @constructor Creates `Saga`
    * @param react - A function/lambda that takes input state of type `AR`, and returns the list of actions `A[]`>.
    */
-  constructor(readonly react: (ar: AR) => readonly A[]) {}
+  constructor(readonly react: (actionResult: AR) => readonly A[]) {}
 
   /**
    * Left map on `AR`/ActionResult parameter - Contravariant
@@ -63,14 +63,14 @@ export class Saga<AR, A> implements ISaga<AR, A> {
   /**
    * Combines two choreography sagas into one orchestrating Saga
    *
-   * @param y - second Saga
+   * @param saga2 - second Saga
    */
-  combine<AR2, A2>(y: Saga<AR2, A2>): Saga<AR | AR2, A | A2> {
+  combine<AR2, A2>(saga2: Saga<AR2, A2>): Saga<AR | AR2, A | A2> {
     const sagaX = this.mapContraOnActionResult<AR | AR2>(
       (en) => en as AR
     ).mapOnAction<A | A2>(identity);
 
-    const sagaY = y
+    const sagaY = saga2
       .mapContraOnActionResult<AR | AR2>((en) => en as AR2)
       .mapOnAction<A | A2>(identity);
 

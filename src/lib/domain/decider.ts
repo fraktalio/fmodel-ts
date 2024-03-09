@@ -222,8 +222,8 @@ class _Decider<C, Si, So, Ei, Eo> {
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export interface IDecider<C, S, E> {
-  readonly decide: (c: C, s: S) => readonly E[];
-  readonly evolve: (s: S, e: E) => S;
+  readonly decide: (command: C, state: S) => readonly E[];
+  readonly evolve: (state: S, event: E) => S;
   readonly initialState: S;
 }
 
@@ -336,8 +336,8 @@ export interface IDecider<C, S, E> {
  */
 export class Decider<C, S, E> implements IDecider<C, S, E> {
   constructor(
-    readonly decide: (c: C, s: S) => readonly E[],
-    readonly evolve: (s: S, e: E) => S,
+    readonly decide: (command: C, state: S) => readonly E[],
+    readonly evolve: (state: S, event: E) => S,
     readonly initialState: S
   ) {}
 
@@ -399,11 +399,11 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combine<C2, S2, E2>(
-    y: Decider<C2, S2, E2>
+    decider2: Decider<C2, S2, E2>
   ): Decider<C | C2, readonly [S, S2], E | E2> {
     return asDecider(
       new _Decider(this.decide, this.evolve, this.initialState).combine(
-        new _Decider(y.decide, y.evolve, y.initialState)
+        new _Decider(decider2.decide, decider2.evolve, decider2.initialState)
       )
     );
   }
@@ -424,14 +424,16 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
    * Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combineAndIntersect<C2, S2 extends object, E2>(
-    y: Decider<C2, S2, E2>
+    decider2: Decider<C2, S2, E2>
   ): Decider<C | C2, S & S2, E | E2> {
     return asDecider(
       new _Decider(
         this.decide,
         this.evolve,
         this.initialState
-      ).combineAndIntersect(new _Decider(y.decide, y.evolve, y.initialState))
+      ).combineAndIntersect(
+        new _Decider(decider2.decide, decider2.evolve, decider2.initialState)
+      )
     );
   }
 }

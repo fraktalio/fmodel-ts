@@ -174,7 +174,7 @@ class _View<Si, So, E> {
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export interface IView<S, E> {
-  readonly evolve: (s: S, e: E) => S;
+  readonly evolve: (state: S, event: E) => S;
   readonly initialState: S;
 }
 
@@ -227,7 +227,10 @@ export interface IView<S, E> {
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class View<S, E> implements IView<S, E> {
-  constructor(readonly evolve: (s: S, e: E) => S, readonly initialState: S) {}
+  constructor(
+    readonly evolve: (state: S, event: E) => S,
+    readonly initialState: S
+  ) {}
 
   /**
    * Contra (Left) map on E/Event parameter - Contravariant
@@ -262,10 +265,10 @@ export class View<S, E> implements IView<S, E> {
    *
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
-  combine<S2, E2>(y: View<S2, E2>): View<readonly [S, S2], E | E2> {
+  combine<S2, E2>(view2: View<S2, E2>): View<readonly [S, S2], E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combine(
-        new _View(y.evolve, y.initialState)
+        new _View(view2.evolve, view2.initialState)
       )
     );
   }
@@ -282,11 +285,11 @@ export class View<S, E> implements IView<S, E> {
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combineAndIntersect<S2 extends object, E2>(
-    y: View<S2, E2>
+    view2: View<S2, E2>
   ): View<S & S2, E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combineAndIntersect(
-        new _View(y.evolve, y.initialState)
+        new _View(view2.evolve, view2.initialState)
       )
     );
   }
