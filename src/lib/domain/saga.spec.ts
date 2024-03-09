@@ -11,68 +11,97 @@
  * language governing permissions and limitations under the License.
  */
 
-/* eslint-disable functional/no-classes,@typescript-eslint/no-unused-vars,functional/no-return-void */
+/* eslint-disable @typescript-eslint/no-unused-vars,functional/no-return-void */
 import test from 'ava';
 
 import { Saga } from './saga';
 
-// ########### Commands ###########
-class AddOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+// ################################
+// ###### Domain - Commands #######
+// ################################
 
-class MultiplyOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddOddNumberCmd = {
+  readonly kindOfCommand: 'AddOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class AddEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type MultiplyOddNumberCmd = {
+  readonly kindOfCommand: 'MultiplyOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class MultiplyEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddEvenNumberCmd = {
+  readonly kindOfCommand: 'AddEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
 
+type MultiplyEvenNumberCmd = {
+  readonly kindOfCommand: 'MultiplyEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
+
+// Type that represents all the Odd numbers commands
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
-
+// Type that represents all the Even numbers commands
 type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 
-// ### Events
-class OddNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+// ################################
+// ###### Domain - Events #########
+// ################################
 
-class OddNumberMultipliedEvt {
-  constructor(readonly value: number) {}
-}
+type OddNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberAddedEvt';
+};
 
-class EvenNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+type OddNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberMultipliedEvt';
+};
 
-class EvenNumberMultipliedEvt {
-  constructor(readonly value: number) {}
-}
+type EvenNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberAddedEvt';
+};
 
+type EvenNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberMultipliedEvt';
+};
+
+// Type that represents all the Odd numbers events
 type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+// Type that represents all the Even numbers events
 type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
 
-const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
+// Saga for Even numbers only
+const evenSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   OddNumberEvt,
   EvenNumberCmd
 >((ar) => {
-  if (ar instanceof OddNumberAddedEvt) {
-    return [new AddEvenNumberCmd(ar.value + 1)];
-  } else if (ar instanceof OddNumberMultipliedEvt) {
-    return [new MultiplyEvenNumberCmd(ar.value + 1)];
-  } else {
-    const _: never = ar;
-    console.log('Never just happened in react function: ' + _);
-    return [];
+  switch (ar.kind) {
+    case 'OddNumberAddedEvt':
+      return [
+        { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: ar.value + 1 },
+      ];
+    case 'OddNumberMultipliedEvt':
+      return [
+        {
+          kindOfCommand: 'MultiplyEvenNumberCmd',
+          valueOfCommand: ar.value + 1,
+        },
+      ];
+    default: {
+      // Exhaustive matching of the Action Result type
+      const _: never = ar;
+      console.log('Never just happened in react function: ' + _);
+      return [];
+    }
   }
 });
 
-const saga2: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
+// Saga for Odd numbers only
+const oddSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
   EvenNumberEvt,
   OddNumberCmd
 >((_) => {
@@ -80,16 +109,21 @@ const saga2: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
   return [];
 });
 
-test('saga-react', (t) => {
-  t.deepEqual(saga.react(new OddNumberAddedEvt(2)), [new AddEvenNumberCmd(3)]);
-});
-
-test('saga2-react', (t) => {
-  t.deepEqual(saga2.react(new EvenNumberAddedEvt(1)), []);
-});
-
-test('saga-combined-react', (t) => {
-  t.deepEqual(saga.combine(saga2).react(new OddNumberMultipliedEvt(2)), [
-    new MultiplyEvenNumberCmd(3),
+test('even-saga-react', (t) => {
+  t.deepEqual(evenSaga.react({ kind: 'OddNumberAddedEvt', value: 2 }), [
+    { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 3 },
   ]);
+});
+
+test('odd-saga-react', (t) => {
+  t.deepEqual(oddSaga.react({ kind: 'EvenNumberAddedEvt', value: 1 }), []);
+});
+
+test('combined-saga-react', (t) => {
+  t.deepEqual(
+    evenSaga
+      .combine(oddSaga)
+      .react({ kind: 'OddNumberMultipliedEvt', value: 2 }),
+    [{ kindOfCommand: 'MultiplyEvenNumberCmd', valueOfCommand: 3 }]
+  );
 });
