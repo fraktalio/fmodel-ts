@@ -484,7 +484,7 @@ const decider = restaurantDecider.combineAndIntersect(orderDecider);
 // Create a repository for the events of all types
 const eventRepository = new EventRepository(supabaseClient);
 // Create an aggregate to handle the commands of all types!
-const aggregate: ApplicationAggregate = new EventSourcingLockingAggregate(
+const aggregate: ApplicationAggregate = new EventSourcingAggregate(
   decider,
   eventRepository,
 );
