@@ -16,17 +16,44 @@
 import { ISaga } from '../domain/saga';
 
 /**
+ * Action publisher interface
+ *
+ * Used by [SagaManager]
+ *
+ * @typeParam A - Action
+ * @typeParam ARM - Action Result Metadata
+ * @typeParam AM - Action Metadata
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IActionPublisher<A, ARM, AM> {
+  /**
+   * Publish actions
+   *
+   * @param actions - of Actions with Action Result Metadata of type `A & ARM`
+   * @return list of newly published Actions with Action Metadata of type `A & AM`
+   */
+  readonly publish: (
+    actions: readonly (A & ARM)[]
+  ) => Promise<readonly (A & AM)[]>;
+}
+
+/**
  * Saga manager interface - Stateless process orchestrator.
  *
  * It is reacting on Action Results of type `AR` and produces new actions `A` based on them.
  *
  * @typeParam AR - Action Result of type `AR`
  * @typeParam A - Action of type `A` that are going to be published downstream
+ * @typeParam ARM - Action Result metadata
+ * @typeParam AM - Action metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export interface ISagaManager<AR, A> extends ISaga<AR, A>, ActionPublisher<A> {
-  readonly handle: (actionResult: AR) => Promise<readonly A[]>;
+export interface ISagaManager<AR, A, ARM, AM>
+  extends ISaga<AR, A>,
+    IActionPublisher<A, ARM, AM> {
+  readonly handle: (actionResult: AR & ARM) => Promise<readonly (A & AM)[]>;
 }
 
 /**
@@ -36,66 +63,42 @@ export interface ISagaManager<AR, A> extends ISaga<AR, A>, ActionPublisher<A> {
  *
  * @typeParam AR - Action Result of type `AR`
  * @typeParam A - Action of type `A` that are going to be published downstream
+ * @typeParam ARM - Action Result metadata
+ * @typeParam AM - Action metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class SagaManager<AR, A> implements ISagaManager<AR, A> {
+export class SagaManager<AR, A, ARM, AM>
+  implements ISagaManager<AR, A, ARM, AM>
+{
   /**
    *
    * @param saga  - A saga component of type `ISaga`<`AR`, `A`>
-   * @param actionPublisher - Interface for `A`ction publishing of type `IActionPublisher`<`A`>
+   * @param actionPublisher - Interface for Action publishing
    */
   constructor(
     protected readonly saga: ISaga<AR, A>,
-    protected readonly actionPublisher: ActionPublisher<A>
+    protected readonly actionPublisher: IActionPublisher<A, ARM, AM>
   ) {}
 
-  react(ar: AR): readonly A[] {
-    return this.saga.react(ar);
+  react(actionResult: AR): readonly A[] {
+    return this.saga.react(actionResult);
   }
 
-  async publish(a: A): Promise<A> {
-    return this.actionPublisher.publish(a);
-  }
-
-  async publishAll(aList: readonly A[]): Promise<readonly A[]> {
-    return this.actionPublisher.publishAll(aList);
+  async publish(actions: readonly (A & ARM)[]): Promise<readonly (A & AM)[]> {
+    return this.actionPublisher.publish(actions);
   }
 
   /**
-   * Handles the action result of type `AR`
+   * Handles the action result with metadata of type `AR & ARM`
    *
    * @param actionResult - Action Result represent the outcome of some action you want to handle in some way
-   * @return list of Actions of type `A`
+   * @return list of Actions with Metadata of type `A & AM`
    */
-  async handle(actionResult: AR): Promise<readonly A[]> {
-    return this.actionPublisher.publishAll(this.saga.react(actionResult));
+  async handle(actionResult: AR & ARM): Promise<readonly (A & AM)[]> {
+    const actions = this.saga.react(actionResult);
+    return this.actionPublisher.publish(
+      actions.map((a: A) => ({ ...a, ...(actionResult as ARM) }))
+    );
   }
-}
-
-/**
- * Action publisher interface
- *
- * Used by [[SagaManager]]
- *
- * @param A - Action
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface ActionPublisher<A> {
-  /**
-   * Publish action
-   *
-   * @param a - Action of type `A`
-   * @return newly published Action of type `A`
-   */
-  readonly publish: (a: A) => Promise<A>;
-
-  /**
-   * Publish actions
-   *
-   * @param aList - of Actions of type `A`
-   * @return list of newly published Actions of type `A`
-   */
-  readonly publishAll: (aList: readonly A[]) => Promise<readonly A[]>;
 }

@@ -17,75 +17,76 @@ import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
 
 /**
+ * State repository interface / fetching and storing the state from/to storage
+ *
+ * @typeParam C - Command
+ * @typeParam S - State
+ * @typeParam V - Version
+ * @typeParam CM - Command Metadata
+ * @typeParam SM - State Metadata
+ *
+ * @author Иван Дугалић / Ivan Dugalic / @idugalic
+ */
+export interface IStateRepository<C, S, V, CM, SM> {
+  /**
+   * Fetch state, version and metadata
+   *
+   * @param command - Command payload
+   * @return current State/[S], Version/[V] and State Metadata/[SM]
+   */
+  readonly fetch: (command: C) => Promise<(S & V & SM) | null>;
+
+  /**
+   * Save state (with optimistic locking)
+   *
+   * You can update/save the item/state, but only if the `version` number in the storage has not changed.
+   *
+   * @param state - State with Command Metadata of type `S & CM`
+   * @param version - The current version of the state
+   * @return newly saved State of type `S & V & SM`
+   */
+  readonly save: (state: S & CM, version: V | null) => Promise<S & V & SM>;
+}
+
+/**
  * State stored aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * In order to handle the command, aggregate needs to fetch the current state via `IStateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  *
- * New state is then stored via `StateRepository.save` function.
- *
- * @typeParam C - Commands of type `C` that this aggregate can handle
- * @typeParam S - Aggregate state of type `S`
- * @typeParam E - Events of type `E` that this aggregate can publish
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface IStateStoredAggregate<C, S, E>
-  extends IDecider<C, S, E>,
-    StateRepository<C, S> {
-  readonly handle: (command: C) => Promise<S>;
-}
-
-/**
- * State stored locking aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateLockingRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
- *
- * New state is then stored via `StateLockingRepository.save` function.
+ * New state is then stored via `IStateRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - The Version of the stored State
+ * @typeParam CM - Command Metadata
+ * @typeParam SM - State Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export interface IStateStoredLockingAggregate<C, S, E, V>
+export interface IStateStoredAggregate<C, S, E, V, CM, SM>
   extends IDecider<C, S, E>,
-    StateLockingRepository<C, S, V> {
-  readonly handle: (command: C) => Promise<readonly [S, V]>;
+    IStateRepository<C, S, V, CM, SM> {
+  readonly handle: (command: C & CM) => Promise<S & V & SM>;
 }
 
 /**
- * State stored orchestrating aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * State stored and orchestrating aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
+ * In order to handle the command, aggregate needs to fetch the current state via `IStateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
  *
- * New state is then stored via `StateRepository.save` function.
- *
- * @typeParam C - Commands of type `C` that this aggregate can handle
- * @typeParam S - Aggregate state of type `S`
- * @typeParam E - Events of type `E` that this aggregate can publish
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface IStateStoredOrchestratingAggregate<C, S, E>
-  extends IStateStoredAggregate<C, S, E>,
-    ISaga<E, C> {}
-
-/**
- * State stored orchestrating and locking aggregate interface is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateLockingRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
- * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
- *
- * New state is then stored via `StateLockingRepository.save` function.
+ * New state is then stored via `IStateRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - The Version of the stored State
+ * @typeParam CM - Command Metadata
+ * @typeParam SM - State Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export interface IStateStoredOrchestratingLockingAggregate<C, S, E, V>
-  extends IStateStoredLockingAggregate<C, S, E, V>,
+export interface IStateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
+  extends IStateStoredAggregate<C, S, E, V, CM, SM>,
     ISaga<E, C> {}
 
 /**
@@ -99,11 +100,11 @@ export abstract class StateComputation<C, S, E> implements IDecider<C, S, E> {
   protected constructor(protected readonly decider: IDecider<C, S, E>) {
     this.initialState = decider.initialState;
   }
-  decide(c: C, s: S): readonly E[] {
-    return this.decider.decide(c, s);
+  decide(command: C, state: S): readonly E[] {
+    return this.decider.decide(command, state);
   }
-  evolve(s: S, e: E): S {
-    return this.decider.evolve(s, e);
+  evolve(state: S, event: E): S {
+    return this.decider.evolve(state, event);
   }
 
   readonly initialState: S;
@@ -131,249 +132,111 @@ export abstract class StateOrchestratingComputation<C, S, E>
   ) {
     super(decider);
   }
-  react(ar: E): readonly C[] {
-    return this.saga.react(ar);
+  react(event: E): readonly C[] {
+    return this.saga.react(event);
   }
   protected override computeNewState(state: S, command: C): S {
     const events = this.decider.decide(command, state);
     // eslint-disable-next-line functional/no-let
     let newState = events.reduce(this.decider.evolve, state);
     events
-      .flatMap((it) => this.saga.react(it))
-      .forEach((c) => (newState = this.computeNewState(newState, c)));
+      .flatMap((evt) => this.saga.react(evt))
+      .forEach((cmd) => (newState = this.computeNewState(newState, cmd)));
     return newState;
   }
 }
 
 /**
  * State stored aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * In order to handle the command, aggregate needs to fetch the current state via `IStateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  *
- * New state is then stored via `StateRepository.save` function.
- *
- * @typeParam C - Commands of type `C` that this aggregate can handle
- * @typeParam S - Aggregate state of type `S`
- * @typeParam E - Events of type `E` that this aggregate can publish
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export class StateStoredAggregate<C, S, E>
-  extends StateComputation<C, S, E>
-  implements IStateStoredAggregate<C, S, E>
-{
-  constructor(
-    decider: IDecider<C, S, E>,
-    protected readonly stateRepository: StateRepository<C, S>
-  ) {
-    super(decider);
-  }
-
-  async fetchState(c: C): Promise<S | null> {
-    return this.stateRepository.fetchState(c);
-  }
-
-  async save(s: S): Promise<S> {
-    return this.stateRepository.save(s);
-  }
-
-  async handle(command: C): Promise<S> {
-    const currentState = await this.stateRepository.fetchState(command);
-    return this.stateRepository.save(
-      this.computeNewState(
-        currentState ? currentState : this.decider.initialState,
-        command
-      )
-    );
-  }
-}
-
-/**
- * State stored locking aggregate is using/delegating a `decider` of type `Decider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateLockingRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
- *
- * New state is then stored via `StateLockingRepository.save` function.
+ * New state is then stored via `IStateRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - The Version of the stored State
+ * @typeParam CM - Command Metadata
+ * @typeParam SM - State Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class StateStoredLockingAggregate<C, S, E, V>
+export class StateStoredAggregate<C, S, E, V, CM, SM>
   extends StateComputation<C, S, E>
-  implements IStateStoredLockingAggregate<C, S, E, V>
+  implements IStateStoredAggregate<C, S, E, V, CM, SM>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    protected readonly stateRepository: StateLockingRepository<C, S, V>
+    protected readonly stateRepository: IStateRepository<C, S, V, CM, SM>
   ) {
     super(decider);
   }
-  async fetchState(c: C): Promise<readonly [S | null, V | null]> {
-    return this.stateRepository.fetchState(c);
+  async fetch(command: C): Promise<(S & V & SM) | null> {
+    return this.stateRepository.fetch(command);
   }
 
-  async save(s: S, v: V | null): Promise<readonly [S, V]> {
-    return this.stateRepository.save(s, v);
+  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
+    return this.stateRepository.save(state, version);
   }
-  async handle(command: C): Promise<readonly [S, V]> {
-    const [currentState, version] = await this.stateRepository.fetchState(
+
+  async handle(command: C & CM): Promise<S & V & SM> {
+    const currentState = await this.stateRepository.fetch(command as C);
+    const newState = this.computeNewState(
+      currentState ? currentState : this.decider.initialState,
       command
     );
     return this.stateRepository.save(
-      this.computeNewState(
-        currentState ? currentState : this.decider.initialState,
-        command
-      ),
-      version
+      { ...newState, ...(command as CM) },
+      currentState as V
     );
   }
 }
 
 /**
  * State stored orchestrating aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
+ * In order to handle the command, aggregate needs to fetch the current state via `IStateRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
  * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
  *
- * New state is then stored via `StateRepository.save` function.
- *
- * @typeParam C - Commands of type `C` that this aggregate can handle
- * @typeParam S - Aggregate state of type `S`
- * @typeParam E - Events of type `E` that this aggregate can publish
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export class StateStoredOrchestratingAggregate<C, S, E>
-  extends StateOrchestratingComputation<C, S, E>
-  implements IStateStoredOrchestratingAggregate<C, S, E>
-{
-  constructor(
-    decider: IDecider<C, S, E>,
-    protected readonly stateRepository: StateRepository<C, S>,
-    saga: ISaga<E, C>
-  ) {
-    super(decider, saga);
-  }
-  async fetchState(c: C): Promise<S | null> {
-    return this.stateRepository.fetchState(c);
-  }
-
-  async save(s: S): Promise<S> {
-    return this.stateRepository.save(s);
-  }
-  async handle(command: C): Promise<S> {
-    const currentState = await this.stateRepository.fetchState(command);
-    return this.stateRepository.save(
-      this.computeNewState(
-        currentState ? currentState : this.decider.initialState,
-        command
-      )
-    );
-  }
-}
-
-/**
- * State stored orchestrating (and locking) aggregate is using/delegating a `decider` of type `IDecider`<`C`, `S`, `E`> to handle commands and produce new state.
- * In order to handle the command, aggregate needs to fetch the current state via `StateLockingRepository.fetchState` function first, and then delegate the command to the `decider` which can produce new state as a result.
- * If the `decider` is combined out of many deciders via `combine` function, an optional `saga` could be used to react on new events and send new commands to the `decider` recursively, in one transaction.
- *
- * New state is then stored via `StateLockingRepository.save` function.
+ * New state is then stored via `IStateRepository.save` function.
  *
  * @typeParam C - Commands of type `C` that this aggregate can handle
  * @typeParam S - Aggregate state of type `S`
  * @typeParam E - Events of type `E` that this aggregate can publish
  * @typeParam V - The Version of the stored State
+ * @typeParam CM - Command Metadata
+ * @typeParam SM - State Metadata
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class StateStoredOrchestratingLockingAggregate<C, S, E, V>
+export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
   extends StateOrchestratingComputation<C, S, E>
-  implements IStateStoredOrchestratingLockingAggregate<C, S, E, V>
+  implements IStateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    protected readonly stateRepository: StateLockingRepository<C, S, V>,
+    protected readonly stateRepository: IStateRepository<C, S, V, CM, SM>,
     saga: ISaga<E, C>
   ) {
     super(decider, saga);
   }
 
-  async fetchState(c: C): Promise<readonly [S | null, V | null]> {
-    return this.stateRepository.fetchState(c);
+  async fetch(command: C): Promise<(S & V & SM) | null> {
+    return this.stateRepository.fetch(command);
   }
 
-  async save(s: S, v: V | null): Promise<readonly [S, V]> {
-    return this.stateRepository.save(s, v);
+  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
+    return this.stateRepository.save(state, version);
   }
 
-  async handle(command: C): Promise<readonly [S, V]> {
-    const [currentState, version] = await this.stateRepository.fetchState(
+  async handle(command: C & CM): Promise<S & V & SM> {
+    const currentState = await this.stateRepository.fetch(command as C);
+    const newState = this.computeNewState(
+      currentState ? currentState : this.decider.initialState,
       command
     );
     return this.stateRepository.save(
-      this.computeNewState(
-        currentState ? currentState : this.decider.initialState,
-        command
-      ),
-      version
+      { ...newState, ...(command as CM) },
+      currentState as V
     );
   }
-}
-
-/**
- * State repository interface
- *
- * @param C - Command
- * @param S - State
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface StateRepository<C, S> {
-  /**
-   * Fetch state
-   *
-   * @param c - Command of type `C`
-   *
-   * @return current state of type `S`
-   */
-  readonly fetchState: (c: C) => Promise<S | null>;
-
-  /**
-   * Save state
-   *
-   * @param s - State of type `S`
-   * @return newly saved State of type `S`
-   */
-  readonly save: (s: S) => Promise<S>;
-}
-
-/**
- * State Locking repository interface
- *
- * @param C - Command
- * @param S - State
- * @param V - Version
- *
- * @author Иван Дугалић / Ivan Dugalic / @idugalic
- */
-export interface StateLockingRepository<C, S, V> {
-  /**
-   * Fetch state and version
-   *
-   * @param c - Command of type `C`
-   * @return the pair of current State/[S] and current Version/[V]
-   */
-  readonly fetchState: (c: C) => Promise<readonly [S | null, V | null]>;
-
-  /**
-   * Save state
-   *
-   * You can update/save the item/state, but only if the `version` number in the storage has not changed.
-   *
-   * @param s - State of type `S`
-   * @param v The current version of the state
-   * @return newly saved State of type [S, V]
-   */
-  readonly save: (s: S, v: V | null) => Promise<readonly [S, V]>;
 }

@@ -19,38 +19,36 @@ import { Decider } from '../domain/decider';
 import { Saga } from '../domain/saga';
 
 import {
-  EventLockingRepository,
-  EventRepository,
   EventSourcingAggregate,
-  EventSourcingLockingAggregate,
   EventSourcingOrchestratingAggregate,
-  EventSourcingOrchestratingLockingAggregate,
+  IEventRepository,
   IEventSourcingAggregate,
-  IEventSourcingLockingAggregate,
   IEventSourcingOrchestratingAggregate,
-  IEventSourcingOrchestratingLockingAggregate,
-  LatestVersionProvider,
 } from './eventsourcing-aggregate';
 
 // ################################
 // ###### Domain - Commands #######
 // ################################
 
-class AddOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddOddNumberCmd = {
+  readonly kindOfCommand: 'AddOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class MultiplyOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+type MultiplyOddNumberCmd = {
+  readonly kindOfCommand: 'MultiplyOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class AddEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddEvenNumberCmd = {
+  readonly kindOfCommand: 'AddEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class MultiplyEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type MultiplyEvenNumberCmd = {
+  readonly kindOfCommand: 'MultiplyEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
 
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
 
@@ -60,23 +58,27 @@ type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 // ###### Domain - Events #########
 // ################################
 
-class OddNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+type OddNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberAddedEvt';
+};
 
-class OddNumberMultipliedEvt {
-  constructor(readonly value: number) {}
-}
+type OddNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberMultipliedEvt';
+};
 
 type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
 
-class EvenNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+type EvenNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberAddedEvt';
+};
 
-class EvenNumberMultipliedEvt {
-  constructor(readonly value: number) {}
-}
+type EvenNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberMultipliedEvt';
+};
 
 type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
 
@@ -84,369 +86,273 @@ type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
 // ###### Domain - Deciders #######
 // ################################
 
-const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
+// A current state of the Even number(s)
+type EvenState = {
+  readonly evenNumber: number;
+};
+
+// A current state of the Odd number(s)
+type OddState = {
+  readonly oddNumber: number;
+};
+
+const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
+  new Decider<EvenNumberCmd, EvenState, EvenNumberEvt>(
+    (c, _) => {
+      switch (c.kindOfCommand) {
+        case 'AddEvenNumberCmd':
+          return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
+        case 'MultiplyEvenNumberCmd':
+          return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
+        default:
+          // Exhaustive matching of the command type
+          // eslint-disable-next-line no-case-declarations
+          const _: never = c;
+          console.log('Never just happened in decide function: ' + _);
+          return [];
+      }
+    },
+    (s, e) => {
+      switch (e.kind) {
+        case 'EvenNumberAddedEvt':
+          return { evenNumber: s.evenNumber + e.value };
+        case 'EvenNumberMultipliedEvt':
+          return { evenNumber: s.evenNumber * e.value };
+        default:
+          // Exhaustive matching of the event type
+          // eslint-disable-next-line no-case-declarations
+          const _: never = e;
+          console.log('Never just happened in evolve function: ' + _);
+          return { evenNumber: s.evenNumber };
+      }
+    },
+    { evenNumber: 0 }
+  );
+
+const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
   OddNumberCmd,
-  number,
+  OddState,
   OddNumberEvt
 >(
   (c, _) => {
-    if (c instanceof AddOddNumberCmd) {
-      return [new OddNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyOddNumberCmd) {
-      return [new OddNumberMultipliedEvt(c.value)];
-    } else {
-      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
-      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
-      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
-      const _: never = c;
-      console.log('Never just happened: ' + _);
-      return [];
+    switch (c.kindOfCommand) {
+      case 'AddOddNumberCmd':
+        return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
+      case 'MultiplyOddNumberCmd':
+        return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
+      default:
+        // Exhaustive matching of the command type
+        // eslint-disable-next-line no-case-declarations
+        const _: never = c;
+        console.log('Never just happened in decide function: ' + _);
+        return [];
     }
   },
   (s, e) => {
-    if (e instanceof OddNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof OddNumberMultipliedEvt) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened: ' + _);
-      return s;
+    switch (e.kind) {
+      case 'OddNumberAddedEvt':
+        return { oddNumber: s.oddNumber + e.value };
+      case 'OddNumberMultipliedEvt':
+        return { oddNumber: s.oddNumber * e.value };
+      default:
+        // Exhaustive matching of the event type
+        // eslint-disable-next-line no-case-declarations
+        const _: never = e;
+        console.log('Never just happened in evolve function: ' + _);
+        return { oddNumber: s.oddNumber };
     }
   },
-  0
-);
-
-const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
-  EvenNumberCmd,
-  number,
-  EvenNumberEvt
->(
-  (c, _) => {
-    if (c instanceof AddEvenNumberCmd) {
-      return [new EvenNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [new EvenNumberMultipliedEvt(c.value)];
-    } else {
-      const _: never = c;
-      console.log('Never just happened: ' + _);
-      return [];
-    }
-  },
-  (s, e) => {
-    if (e instanceof EvenNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof EvenNumberMultipliedEvt) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return s;
-    }
-  },
-  0
+  { oddNumber: 0 }
 );
 
 // ################################
 // ####### Domain - Sagas #########
 // ################################
 
-const saga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
+const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   OddNumberEvt,
   EvenNumberCmd
 >((ar) => {
-  if (ar instanceof OddNumberAddedEvt) {
-    return [new AddEvenNumberCmd(ar.value + 1)];
-  } else if (ar instanceof OddNumberMultipliedEvt) {
-    return [new MultiplyEvenNumberCmd(ar.value + 1)];
-  } else {
-    // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
-    // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
-    // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
-    const _: never = ar;
-    console.log('Never just happened: ' + _);
-    return [];
+  switch (ar.kind) {
+    case 'OddNumberAddedEvt':
+      return [
+        {
+          kindOfCommand: 'AddEvenNumberCmd',
+          valueOfCommand: ar.value + 1,
+        },
+      ];
+    case 'OddNumberMultipliedEvt':
+      return [
+        {
+          kindOfCommand: 'MultiplyEvenNumberCmd',
+          valueOfCommand: ar.value + 1,
+        },
+      ];
+    default:
+      // Exhaustive matching of the event type
+      // eslint-disable-next-line no-case-declarations
+      const _: never = ar;
+      console.log('Never just happened in saga react function: ' + _);
+      return [];
   }
+});
+
+const evenSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
+  EvenNumberEvt,
+  OddNumberCmd
+>((_) => {
+  return [];
 });
 
 // ################################
 // ###### Application - Repo ######
 // ################################
 
-const storage: readonly OddNumberEvt[] = [];
-const storage2: readonly EvenNumberEvt[] = [];
-const lockingStorage2: readonly (readonly [EvenNumberEvt, number])[] = [];
-const storage3: readonly (OddNumberEvt | EvenNumberEvt)[] = [];
+const storage: readonly (Evt & Version)[] = [];
+
+// A type representing the version
+type Version = {
+  readonly version: number;
+};
+
+type Cmd = EvenNumberCmd | OddNumberCmd;
+type Evt = EvenNumberEvt | OddNumberEvt;
 
 class EventRepositoryImpl
-  implements EventRepository<OddNumberCmd, OddNumberEvt>
+  implements IEventRepository<Cmd, Evt, Version, Cmd, Evt>
 {
-  async fetchEvents(_c: OddNumberCmd): Promise<readonly OddNumberEvt[]> {
+  async fetch(_c: Cmd): Promise<readonly (Evt & Version)[]> {
     return storage;
   }
 
-  async save(e: OddNumberEvt): Promise<OddNumberEvt> {
-    storage.concat(e);
-    return e;
-  }
-
-  async saveAll(
-    eList: readonly OddNumberEvt[]
-  ): Promise<readonly OddNumberEvt[]> {
-    storage.concat(eList);
-    return eList;
-  }
-}
-
-class EventRepositoryImpl2
-  implements EventRepository<EvenNumberCmd, EvenNumberEvt>
-{
-  async fetchEvents(_c: EvenNumberCmd): Promise<readonly EvenNumberEvt[]> {
-    return storage2;
-  }
-
-  async save(e: EvenNumberEvt): Promise<EvenNumberEvt> {
-    storage2.concat(e);
-    return e;
-  }
-
-  async saveAll(
-    eList: readonly EvenNumberEvt[]
-  ): Promise<readonly EvenNumberEvt[]> {
-    storage2.concat(eList);
-    return eList;
-  }
-}
-
-class EventRepositoryLockingImpl2
-  implements EventLockingRepository<EvenNumberCmd, EvenNumberEvt, number>
-{
-  async fetchEvents(
-    _c: EvenNumberCmd
-  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
-    return lockingStorage2;
-  }
-
   async save(
-    e: EvenNumberEvt,
-    latestVersion: number | null
-  ): Promise<readonly [EvenNumberEvt, number]> {
-    // eslint-disable-next-line functional/no-let
-    let version;
-    if (latestVersion) {
-      version = latestVersion;
-    } else version = 0;
-
-    lockingStorage2.concat([e, version + 1]);
-    return [e, version + 1];
-  }
-
-  async saveAll(
-    eList: readonly EvenNumberEvt[],
-    latestVersion: number | null
-  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
-    // eslint-disable-next-line functional/no-let
-    let version: number;
-    if (latestVersion) {
-      version = latestVersion;
-    } else version = 0;
-
-    const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
-      eList.map((e, index) => [e, version + index + 1]);
-    lockingStorage2.concat(savedEvents);
+    eList: readonly (Evt & Cmd)[],
+    versionProvider: (e: Evt) => Promise<Version | null>
+  ): Promise<readonly (Evt & Version)[]> {
+    const savedEvents: readonly (Evt & Version)[] = await Promise.all(
+      eList.map(async (e: Evt, index) => ({
+        kind: e.kind,
+        value: e.value,
+        version: ((await versionProvider(e))?.version ?? 0) + index + 1,
+      }))
+    );
+    storage.concat(savedEvents);
     return savedEvents;
   }
 
-  readonly latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number> =
-    async (_: EvenNumberEvt) =>
-      lockingStorage2.map((it) => it[1])[lockingStorage2.length - 1];
-
-  async saveByLatestVersionProvided(
-    e: EvenNumberEvt,
-    latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
-  ): Promise<readonly [EvenNumberEvt, number]> {
-    const latestVersion = await latestVersionProvider(e);
-    // eslint-disable-next-line functional/no-let
-    let version;
-    if (latestVersion) {
-      version = latestVersion;
-    } else version = 0;
-
-    lockingStorage2.concat([e, version + 1]);
-    return [e, version + 1];
-  }
-
-  async saveAllByLatestVersionProvided(
-    eList: readonly EvenNumberEvt[],
-    latestVersionProvider: LatestVersionProvider<EvenNumberEvt, number>
-  ): Promise<readonly (readonly [EvenNumberEvt, number])[]> {
-    const savedEvents: readonly (readonly [EvenNumberEvt, number])[] =
-      await Promise.all(
-        eList.map(async (e, index) => [
-          e,
-          ((await latestVersionProvider(e)) ?? 0) + index + 1,
-        ])
-      );
-    lockingStorage2.concat(savedEvents);
-    return savedEvents;
+  async versionProvider(_e: Evt): Promise<Version | null> {
+    return storage[storage.length - 1];
   }
 }
 
-class EventRepositoryImpl3
-  implements
-    EventRepository<EvenNumberCmd | OddNumberCmd, OddNumberEvt | EvenNumberEvt>
-{
-  async fetchEvents(
-    _c: EvenNumberCmd | OddNumberCmd
-  ): Promise<readonly (OddNumberEvt | EvenNumberEvt)[]> {
-    return storage3;
-  }
-
-  async save(
-    e: OddNumberEvt | EvenNumberEvt
-  ): Promise<OddNumberEvt | EvenNumberEvt> {
-    storage3.concat(e);
-    return e;
-  }
-
-  async saveAll(
-    eList: readonly (OddNumberEvt | EvenNumberEvt)[]
-  ): Promise<readonly (OddNumberEvt | EvenNumberEvt)[]> {
-    storage3.concat(eList);
-    return eList;
-  }
-}
-
-const repository: EventRepository<OddNumberCmd, OddNumberEvt> =
+const repository: IEventRepository<Cmd, Evt, Version, Cmd, Evt> =
   new EventRepositoryImpl();
-
-const repository2: EventRepository<EvenNumberCmd, EvenNumberEvt> =
-  new EventRepositoryImpl2();
-
-const repositoryLocking2: EventLockingRepository<
-  EvenNumberCmd,
-  EvenNumberEvt,
-  number
-> = new EventRepositoryLockingImpl2();
-
-const repository3: EventRepository<
-  EvenNumberCmd | OddNumberCmd,
-  OddNumberEvt | EvenNumberEvt
-> = new EventRepositoryImpl3();
 
 // ################################
 // ### Application - Aggregates ###
 // ################################
 
-const aggregate: IEventSourcingAggregate<OddNumberCmd, number, OddNumberEvt> =
-  new EventSourcingAggregate<OddNumberCmd, number, OddNumberEvt>(
-    decider,
-    repository
-  );
+const aggregate: IEventSourcingAggregate<
+  Cmd,
+  OddState & EvenState,
+  Evt,
+  Version,
+  Cmd,
+  Evt
+> = new EventSourcingAggregate<
+  Cmd,
+  OddState & EvenState,
+  Evt,
+  Version,
+  Cmd,
+  Evt
+>(evenDecider.combineAndIntersect(oddDecider), repository);
 
 const aggregate2: IEventSourcingAggregate<
-  EvenNumberCmd,
-  number,
-  EvenNumberEvt
-> = new EventSourcingAggregate<EvenNumberCmd, number, EvenNumberEvt>(
-  decider2,
-  repository2
-);
-
-const aggregateLocking2: IEventSourcingLockingAggregate<
-  EvenNumberCmd,
-  number,
-  EvenNumberEvt,
-  number
-> = new EventSourcingLockingAggregate<
-  EvenNumberCmd,
-  number,
-  EvenNumberEvt,
-  number
->(decider2, repositoryLocking2);
-
-const aggregate3: IEventSourcingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt
+  Cmd,
+  readonly [EvenState, OddState],
+  Evt,
+  Version,
+  Cmd,
+  Evt
 > = new EventSourcingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt
->(decider.combine(decider2), repository3);
+  Cmd,
+  readonly [EvenState, OddState],
+  Evt,
+  Version,
+  Cmd,
+  Evt
+>(evenDecider.combine(oddDecider), repository);
 
-const aggregate4: IEventSourcingOrchestratingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt
+const aggregate3: IEventSourcingOrchestratingAggregate<
+  Cmd,
+  readonly [EvenState, OddState],
+  Evt,
+  Version,
+  Cmd,
+  Evt
 > = new EventSourcingOrchestratingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt
->(decider.combine(decider2), repository3, saga);
-
-const aggregateLocking4: IEventSourcingOrchestratingLockingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt,
-  number
-> = new EventSourcingOrchestratingLockingAggregate<
-  EvenNumberCmd | OddNumberCmd,
-  readonly [number, number],
-  OddNumberEvt | EvenNumberEvt,
-  number
->(decider.combine(decider2), repositoryLocking2, saga);
+  Cmd,
+  readonly [EvenState, OddState],
+  Evt,
+  Version,
+  Cmd,
+  Evt
+>(evenDecider.combine(oddDecider), repository, oddSaga.combine(evenSaga));
 
 // ################################
 // ############ Tests #############
 // ################################
 
 test('aggregate-handle', async (t) => {
-  t.deepEqual(await aggregate.handle(new AddOddNumberCmd(1)), [
-    new OddNumberAddedEvt(1),
-  ]);
+  t.deepEqual(
+    await aggregate.handle({
+      kindOfCommand: 'AddOddNumberCmd',
+      valueOfCommand: 1,
+    }),
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt' }]
+  );
 });
 
 test('aggregate-handle2', async (t) => {
-  t.deepEqual(await aggregate2.handle(new AddEvenNumberCmd(2)), [
-    new EvenNumberAddedEvt(2),
-  ]);
-});
-
-test('aggregate-locking-handle2', async (t) => {
-  t.deepEqual(await aggregateLocking2.handle(new AddEvenNumberCmd(2)), [
-    [new EvenNumberAddedEvt(2), 1],
-  ]);
+  t.deepEqual(
+    await aggregate.handle({
+      kindOfCommand: 'AddEvenNumberCmd',
+      valueOfCommand: 2,
+    }),
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt' }]
+  );
 });
 
 test('aggregate-handle3', async (t) => {
-  t.deepEqual(await aggregate3.handle(new AddOddNumberCmd(1)), [
-    new OddNumberAddedEvt(1),
-  ]);
+  t.deepEqual(
+    await aggregate2.handle({
+      kindOfCommand: 'AddOddNumberCmd',
+      valueOfCommand: 1,
+    }),
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt' }]
+  );
 });
 
 test('aggregate-handle4', async (t) => {
-  t.deepEqual(await aggregate3.handle(new AddEvenNumberCmd(2)), [
-    new EvenNumberAddedEvt(2),
-  ]);
+  t.deepEqual(
+    await aggregate2.handle({
+      kindOfCommand: 'AddEvenNumberCmd',
+      valueOfCommand: 2,
+    }),
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt' }]
+  );
 });
 
 test('aggregate-handle5', async (t) => {
-  t.deepEqual(await aggregate4.handle(new AddEvenNumberCmd(6)), [
-    new EvenNumberAddedEvt(6),
-  ]);
-});
-
-test('aggregate-handle6', async (t) => {
-  t.deepEqual(await aggregate4.handle(new AddOddNumberCmd(7)), [
-    new OddNumberAddedEvt(7),
-    new EvenNumberAddedEvt(8),
-  ]);
-});
-
-test('aggregate-locking-handle6', async (t) => {
-  t.deepEqual(await aggregateLocking4.handle(new AddOddNumberCmd(7)), [
-    [new OddNumberAddedEvt(7), 1],
-    [new EvenNumberAddedEvt(8), 2],
-  ]);
+  t.deepEqual(
+    await aggregate3.handle({
+      kindOfCommand: 'AddOddNumberCmd',
+      valueOfCommand: 3,
+    }),
+    [
+      { value: 3, version: 1, kind: 'OddNumberAddedEvt' },
+      { value: 4, version: 2, kind: 'EvenNumberAddedEvt' },
+    ]
+  );
 });

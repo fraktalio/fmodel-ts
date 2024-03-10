@@ -10,151 +10,149 @@
  * AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific
  * language governing permissions and limitations under the License.
  */
+/* eslint-disable functional/no-return-void */
 
-/* eslint-disable functional/no-classes,functional/no-return-void */
 import test from 'ava';
 
 import { View } from './view';
 
-// ### Events
-class OddNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+// ################################
+// ###### Domain - Events #########
+// ################################
 
-class OddNumberMultiplied {
-  constructor(readonly value: number) {}
-}
-
-type OddNumberEvt = OddNumberAddedEvt | OddNumberMultiplied;
-
-class EvenNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
-
-class EvenNumberMultiplied {
-  constructor(readonly value: number) {}
-}
-
-type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultiplied;
-
-const view: View<number, OddNumberEvt> = new View<number, OddNumberEvt>(
-  (s, e) => {
-    if (e instanceof OddNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof OddNumberMultiplied) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return s;
-    }
-  },
-  0
-);
-
-const view2: View<number, EvenNumberEvt> = new View<number, EvenNumberEvt>(
-  (s, e) => {
-    if (e instanceof EvenNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof EvenNumberMultiplied) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return s;
-    }
-  },
-  0
-);
-
-type OddState = {
-  oddNumber: number;
+type OddNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberAddedEvt';
 };
-const view3: View<OddState, OddNumberEvt> = new View<OddState, OddNumberEvt>(
-  (s, e) => {
-    if (e instanceof OddNumberAddedEvt) {
-      return { oddNumber: s.oddNumber + e.value };
-    } else if (e instanceof OddNumberMultiplied) {
-      return { oddNumber: s.oddNumber * e.value };
-    } else {
-      const _: never = e;
-      console.log('Returning state 1: ' + s);
-      console.log('Never just happened in evolve function decider 1: ' + _);
-      console.log('Returning state 2: ' + s);
-      return { oddNumber: s.oddNumber };
-    }
-  },
-  { oddNumber: 0 }
-);
 
-type EvenState = {
-  evenNumber: number;
+type OddNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberMultipliedEvt';
 };
-const view4: View<EvenState, EvenNumberEvt> = new View<
-  EvenState,
+
+// A type representing the events for the Odd numbers
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+
+type EvenNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberAddedEvt';
+};
+
+type EvenNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberMultipliedEvt';
+};
+
+// A type representing the events for the Even numbers
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
+
+// A type representing the state of the view for Even numbers
+type EvenViewState = {
+  readonly evenState: number;
+};
+
+// A type representing the state of the view for Odd numbers
+type OddViewState = {
+  readonly oddState: number;
+};
+
+// A dedicated View for the Even numbers only
+const evenView: View<EvenViewState, EvenNumberEvt> = new View<
+  EvenViewState,
   EvenNumberEvt
 >(
   (s, e) => {
-    console.log('S: ' + s + ', E: ' + e.value);
-    if (e instanceof EvenNumberAddedEvt) {
-      console.log('EvenNumberAddedEvt: ' + e.value);
-      return { evenNumber: s.evenNumber + e.value };
-    } else if (e instanceof EvenNumberMultiplied) {
-      console.log('EvenNumberMultiplied: ' + e);
-      return { evenNumber: s.evenNumber * e.value };
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function in decider 2 ' + _);
-      return { evenNumber: s.evenNumber };
+    switch (e.kind) {
+      case 'EvenNumberAddedEvt': {
+        return { evenState: s.evenState + e.value };
+      }
+      case 'EvenNumberMultipliedEvt':
+        return { evenState: s.evenState * e.value };
+      default:
+        // Exhaustive matching of the event type
+        // eslint-disable-next-line no-case-declarations
+        const _: never = e;
+        console.log('Never just happened in evolve function: ' + _);
+        return { evenState: s.evenState };
     }
   },
-  { evenNumber: 0 }
+  { evenState: 0 }
 );
 
-test('view-evolve', (t) => {
-  t.is(view.evolve(1, new OddNumberAddedEvt(1)), 2);
-});
+// A dedicated View for the Odd numbers only
+const oddView: View<OddViewState, OddNumberEvt> = new View<
+  OddViewState,
+  OddNumberEvt
+>(
+  (s, e) => {
+    switch (e.kind) {
+      case 'OddNumberAddedEvt':
+        return { oddState: s.oddState + e.value };
+      case 'OddNumberMultipliedEvt':
+        return { oddState: s.oddState * e.value };
+      default:
+        // Exhaustive matching of the event type
+        // eslint-disable-next-line no-case-declarations
+        const _: never = e;
+        console.log('Never just happened in evolve function: ' + _);
+        return { oddState: s.oddState };
+    }
+  },
+  { oddState: 0 }
+);
 
-test('view-evolve2', (t) => {
-  t.is(view.evolve(2, new OddNumberMultiplied(5)), 10);
-});
-
-test('view2-evolve', (t) => {
-  t.is(view2.evolve(1, new EvenNumberAddedEvt(2)), 3);
-});
-
-test('view2-evolve2', (t) => {
-  t.is(view2.evolve(2, new EvenNumberMultiplied(6)), 12);
-});
-
-test('view-combined-evolve', (t) => {
+test('odd-view-evolve', (t) => {
   t.deepEqual(
-    view.combine(view2).evolve([0, 0], new OddNumberAddedEvt(1)),
-    [1, 0]
+    oddView.evolve({ oddState: 1 }, { kind: 'OddNumberAddedEvt', value: 1 }),
+    { oddState: 2 }
   );
 });
 
-test('view-combined-evolve2', (t) => {
+test('odd-view-evolve2', (t) => {
   t.deepEqual(
-    view.combine(view2).evolve([0, 0], new EvenNumberAddedEvt(2)),
-    [0, 2]
+    oddView.evolve(
+      { oddState: 2 },
+      { kind: 'OddNumberMultipliedEvt', value: 5 }
+    ),
+    { oddState: 10 }
   );
 });
 
-test('view-combined-evolve3', (t) => {
+test('even-view-evolve', (t) => {
   t.deepEqual(
-    view3
-      .combineAndIntersect(view4)
-      .evolve({ evenNumber: 0, oddNumber: 0 }, new OddNumberAddedEvt(1)),
-    { evenNumber: 0, oddNumber: 1 }
+    evenView.evolve({ evenState: 1 }, { kind: 'EvenNumberAddedEvt', value: 2 }),
+    { evenState: 3 }
   );
 });
 
-test('view-combined-evolve4', (t) => {
+test('even-view-evolve2', (t) => {
   t.deepEqual(
-    view3
-      .combineAndIntersect(view4)
-      .evolve({ evenNumber: 0, oddNumber: 0 }, new EvenNumberAddedEvt(2)),
-    { evenNumber: 2, oddNumber: 0 }
+    evenView.evolve(
+      { evenState: 2 },
+      { kind: 'EvenNumberMultipliedEvt', value: 6 }
+    ),
+    { evenState: 12 }
+  );
+});
+
+test('combined-view-evolve', (t) => {
+  t.deepEqual(
+    oddView.combine(evenView).evolve([{ oddState: 0 }, { evenState: 0 }], {
+      kind: 'OddNumberAddedEvt',
+      value: 1,
+    }),
+    [{ oddState: 1 }, { evenState: 0 }]
+  );
+});
+
+test('combined-and-intersected-view-evolve', (t) => {
+  t.deepEqual(
+    oddView
+      .combineAndIntersect(evenView)
+      .evolve(
+        { oddState: 0, evenState: 0 },
+        { kind: 'OddNumberAddedEvt', value: 1 }
+      ),
+    { oddState: 1, evenState: 0 }
   );
 });

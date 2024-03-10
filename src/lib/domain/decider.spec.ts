@@ -13,286 +13,239 @@
 
 /* eslint-disable @typescript-eslint/no-unused-vars,functional/no-return-void */
 
-/* eslint-disable functional/no-classes */
-
 import test from 'ava';
 
 import { Decider } from './decider';
 
-// ########### Commands ###########
-class AddOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+// ################################
+// ###### Domain - Commands #######
+// ################################
 
-class MultiplyOddNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddOddNumberCmd = {
+  readonly kindOfCommand: 'AddOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class AddEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type MultiplyOddNumberCmd = {
+  readonly kindOfCommand: 'MultiplyOddNumberCmd';
+  readonly valueOfCommand: number;
+};
 
-class MultiplyEvenNumberCmd {
-  constructor(readonly value: number) {}
-}
+type AddEvenNumberCmd = {
+  readonly kindOfCommand: 'AddEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
+
+type MultiplyEvenNumberCmd = {
+  readonly kindOfCommand: 'MultiplyEvenNumberCmd';
+  readonly valueOfCommand: number;
+};
 
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
 
 type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 
-// ### Events
-class OddNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
+// ################################
+// ###### Domain - Events #########
+// ################################
 
-class OddNumberMultiplied {
-  constructor(readonly value: number) {}
-}
-
-type OddNumberEvt = OddNumberAddedEvt | OddNumberMultiplied;
-
-class EvenNumberAddedEvt {
-  constructor(readonly value: number) {}
-}
-
-class EvenNumberMultiplied {
-  constructor(readonly value: number) {}
-}
-
-type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultiplied;
-
-const decider: Decider<OddNumberCmd, number, OddNumberEvt> = new Decider<
-  OddNumberCmd,
-  number,
-  OddNumberEvt
->(
-  (c, _) => {
-    if (c instanceof AddOddNumberCmd) {
-      return [new OddNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyOddNumberCmd) {
-      return [new OddNumberMultiplied(c.value)];
-    } else {
-      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
-      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
-      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
-      const _: never = c;
-      console.log('Never just happened in decide function: ' + _);
-      return [];
-    }
-  },
-  (s, e) => {
-    if (e instanceof OddNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof OddNumberMultiplied) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return s;
-    }
-  },
-  0
-);
-
-const decider2: Decider<EvenNumberCmd, number, EvenNumberEvt> = new Decider<
-  EvenNumberCmd,
-  number,
-  EvenNumberEvt
->(
-  (c, _) => {
-    if (c instanceof AddEvenNumberCmd) {
-      return [new EvenNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [new EvenNumberMultiplied(c.value)];
-    } else {
-      const _: never = c;
-      console.log('Never just happened in decide function: ' + _);
-      return [];
-    }
-  },
-  (s, e) => {
-    if (e instanceof EvenNumberAddedEvt) {
-      return s + e.value;
-    } else if (e instanceof EvenNumberMultiplied) {
-      return s * e.value;
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return s;
-    }
-  },
-  0
-);
-
-type OddState = {
-  oddNumber: number;
+type OddNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberAddedEvt';
 };
-const decider3: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
+
+type OddNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'OddNumberMultipliedEvt';
+};
+
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+
+type EvenNumberAddedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberAddedEvt';
+};
+
+type EvenNumberMultipliedEvt = {
+  readonly value: number;
+  readonly kind: 'EvenNumberMultipliedEvt';
+};
+
+type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
+
+// ################################
+// ###### Domain - Deciders #######
+// ################################
+
+// A current state of the Even number(s)
+type EvenState = {
+  readonly evenNumber: number;
+};
+
+// A current state of the Odd number(s)
+type OddState = {
+  readonly oddNumber: number;
+};
+
+// Even number decider - It works with even numbers only
+const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
+  new Decider<EvenNumberCmd, EvenState, EvenNumberEvt>(
+    (c, _) => {
+      switch (c.kindOfCommand) {
+        case 'AddEvenNumberCmd':
+          return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
+        case 'MultiplyEvenNumberCmd':
+          return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
+        default: {
+          // Exhaustive matching of the command type
+          const _: never = c;
+          console.log('Never just happened in decide function: ' + _);
+          return [];
+        }
+      }
+    },
+    (s, e) => {
+      switch (e.kind) {
+        case 'EvenNumberAddedEvt':
+          return { evenNumber: s.evenNumber + e.value };
+        case 'EvenNumberMultipliedEvt':
+          return { evenNumber: s.evenNumber * e.value };
+        default: {
+          // Exhaustive matching of the event type
+          const _: never = e;
+          console.log('Never just happened in evolve function: ' + _);
+          return { evenNumber: s.evenNumber };
+        }
+      }
+    },
+    { evenNumber: 0 }
+  );
+
+// Odd number decider - It works with odd numbers only
+const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
   OddNumberCmd,
   OddState,
   OddNumberEvt
 >(
   (c, _) => {
-    if (c instanceof AddOddNumberCmd) {
-      return [new OddNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyOddNumberCmd) {
-      return [new OddNumberMultiplied(c.value)];
-    } else {
-      // https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
-      // When narrowing, you can reduce the options of a union to a point where you have removed all possibilities and have nothing left. In those cases, TypeScript will use a never type to represent a state which shouldn’t exist.
-      // The `never` type is assignable to every type; however, no type is assignable to `never` (except `never` itself).
-      const _: never = c;
-      console.log('Never just happened in decide function: ' + _);
-      return [];
+    switch (c.kindOfCommand) {
+      case 'AddOddNumberCmd':
+        return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
+      case 'MultiplyOddNumberCmd':
+        return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
+      default: {
+        // Exhaustive matching of the command type
+        const _: never = c;
+        console.log('Never just happened in decide function: ' + _);
+        return [];
+      }
     }
   },
   (s, e) => {
-    if (e instanceof OddNumberAddedEvt) {
-      return { oddNumber: s.oddNumber + e.value };
-    } else if (e instanceof OddNumberMultiplied) {
-      return { oddNumber: s.oddNumber * e.value };
-    } else {
-      const _: never = e;
-      console.log('Returning state 1: ' + s);
-      console.log('Never just happened in evolve function decider 1: ' + _);
-      console.log('Returning state 2: ' + s);
-      return { oddNumber: s.oddNumber };
+    switch (e.kind) {
+      case 'OddNumberAddedEvt':
+        return { oddNumber: s.oddNumber + e.value };
+      case 'OddNumberMultipliedEvt':
+        return { oddNumber: s.oddNumber * e.value };
+      default: {
+        // Exhaustive matching of the event type
+        const _: never = e;
+        console.log('Never just happened in evolve function: ' + _);
+        return { oddNumber: s.oddNumber };
+      }
     }
   },
   { oddNumber: 0 }
 );
 
-type EvenState = {
-  evenNumber: number;
-};
-const decider4: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> = new Decider<
-  EvenNumberCmd,
-  EvenState,
-  EvenNumberEvt
->(
-  (c, _) => {
-    if (c instanceof AddEvenNumberCmd) {
-      return [new EvenNumberAddedEvt(c.value)];
-    } else if (c instanceof MultiplyEvenNumberCmd) {
-      return [new EvenNumberMultiplied(c.value)];
-    } else {
-      const _: never = c;
-      console.log('Never just happened in decide function: ' + _);
-      return [];
-    }
-  },
-  (s, e) => {
-    if (e instanceof EvenNumberAddedEvt) {
-      return { evenNumber: s.evenNumber + e.value };
-    } else if (e instanceof EvenNumberMultiplied) {
-      return { evenNumber: s.evenNumber * e.value };
-    } else {
-      const _: never = e;
-      console.log('Never just happened in evolve function: ' + _);
-      return { evenNumber: s.evenNumber };
-    }
-  },
-  { evenNumber: 0 }
-);
-
-test('decider-evolve', (t) => {
-  t.is(decider.evolve(1, new OddNumberAddedEvt(1)), 2);
-});
-
-test('decider2-evolve', (t) => {
-  t.is(decider2.evolve(1, new EvenNumberAddedEvt(2)), 3);
-});
-
-test('decider-combined-evolve', (t) => {
+test('odd-decider-evolve', (t) => {
   t.deepEqual(
-    decider.combine(decider2).evolve([0, 0], new EvenNumberAddedEvt(2)),
-    [0, 2]
+    oddDecider.evolve(
+      { oddNumber: 1 },
+      { kind: 'OddNumberAddedEvt', value: 1 }
+    ),
+    { oddNumber: 2 }
   );
 });
 
-test('decider-combined-evolve2', (t) => {
+test('even-decider-evolve', (t) => {
   t.deepEqual(
-    decider.combine(decider2).evolve([0, 0], new OddNumberAddedEvt(3)),
-    [3, 0]
+    evenDecider.evolve(
+      { evenNumber: 1 },
+      { kind: 'EvenNumberAddedEvt', value: 2 }
+    ),
+    { evenNumber: 3 }
   );
 });
 
-test('decider-combined-evolve3', (t) => {
+test('combined-decider-evolve', (t) => {
   t.deepEqual(
-    decider.combine(decider2).evolve([2, 1], new OddNumberMultiplied(3)),
-    [6, 1]
+    oddDecider
+      .combine(evenDecider)
+      .evolve([{ oddNumber: 0 }, { evenNumber: 0 }], {
+        kind: 'EvenNumberAddedEvt',
+        value: 2,
+      }),
+    [{ oddNumber: 0 }, { evenNumber: 2 }]
   );
 });
 
-test('decider-combined-evolve4', (t) => {
+test('combined-decider-evolve-2', (t) => {
   t.deepEqual(
-    decider3
-      .combineAndIntersect(decider4)
-      .evolve({ evenNumber: 0, oddNumber: 0 }, new EvenNumberAddedEvt(2)),
-    { evenNumber: 2, oddNumber: 0 }
+    oddDecider
+      .combine(evenDecider)
+      .evolve([{ oddNumber: 0 }, { evenNumber: 0 }], {
+        kind: 'OddNumberAddedEvt',
+        value: 3,
+      }),
+    [{ oddNumber: 3 }, { evenNumber: 0 }]
   );
 });
 
 test('decider-decide', (t) => {
-  t.deepEqual(decider.decide(new AddOddNumberCmd(1), 1), [
-    new OddNumberAddedEvt(1),
-  ]);
+  t.deepEqual(
+    oddDecider.decide(
+      { kindOfCommand: 'AddOddNumberCmd', valueOfCommand: 1 },
+      { oddNumber: 1 }
+    ),
+    [{ kind: 'OddNumberAddedEvt', value: 1 }]
+  );
 });
 
-test('decider-decide2', (t) => {
+test('decider-decide-with-map', (t) => {
   t.deepEqual(
-    decider
+    oddDecider
       .mapContraOnCommand<OddNumberCmd | EvenNumberCmd>(
         (cn) => cn as OddNumberCmd
       )
-      .decide(new AddEvenNumberCmd(2), 1),
+      .decide(
+        { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 2 },
+        { oddNumber: 2 }
+      ),
     []
   );
 });
 
-test('decider-decide3', (t) => {
+test('combined-decider-decide', (t) => {
   t.deepEqual(
-    decider
-      .mapContraOnCommand<OddNumberCmd | EvenNumberCmd>(
-        (cn) => cn as OddNumberCmd
-      )
-      .decide(new AddOddNumberCmd(1), 1),
-    [new OddNumberAddedEvt(1)]
+    oddDecider
+      .combine(evenDecider)
+      .decide({ kindOfCommand: 'AddOddNumberCmd', valueOfCommand: 1 }, [
+        { oddNumber: 0 },
+        { evenNumber: 0 },
+      ]),
+    [{ kind: 'OddNumberAddedEvt', value: 1 }]
   );
 });
 
-test('decider2-decide', (t) => {
-  t.deepEqual(decider2.decide(new AddEvenNumberCmd(2), 0), [
-    new EvenNumberAddedEvt(2),
-  ]);
-});
-
-test('decider-combined-decide', (t) => {
+test('combined-decider-decide-2', (t) => {
   t.deepEqual(
-    decider.combine(decider2).decide(new AddOddNumberCmd(1), [0, 0]),
-    [new OddNumberAddedEvt(1)]
-  );
-});
-
-test('decider-combined-decide2', (t) => {
-  t.deepEqual(
-    decider.combine(decider2).decide(new MultiplyOddNumberCmd(1), [0, 0]),
-    [new OddNumberMultiplied(1)]
-  );
-});
-
-test('decider-combined-decide3', (t) => {
-  t.deepEqual(
-    decider.combine(decider2).decide(new AddEvenNumberCmd(2), [0, 0]),
-    [new EvenNumberAddedEvt(2)]
-  );
-});
-
-test('decider-combined-decide4', (t) => {
-  t.deepEqual(
-    decider3
-      .combineAndIntersect(decider4)
-      .decide(new AddEvenNumberCmd(2), { evenNumber: 0, oddNumber: 0 }),
-    [new EvenNumberAddedEvt(2)]
+    oddDecider
+      .combineAndIntersect(evenDecider)
+      .decide(
+        { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 2 },
+        { evenNumber: 0, oddNumber: 0 }
+      ),
+    [{ kind: 'EvenNumberAddedEvt', value: 2 }]
   );
 });
