@@ -178,10 +178,10 @@ test('even-decider-evolve', (t) => {
   );
 });
 
-test('combined-decider-evolve', (t) => {
+test('combined-via-tuples-decider-evolve', (t) => {
   t.deepEqual(
     oddDecider
-      .combine(evenDecider)
+      .combineViaTuples(evenDecider)
       .evolve([{ oddNumber: 0 }, { evenNumber: 0 }], {
         kind: 'EvenNumberAddedEvt',
         value: 2,
@@ -190,19 +190,20 @@ test('combined-decider-evolve', (t) => {
   );
 });
 
-test('combined-decider-evolve-2', (t) => {
+test('combined-decider-evolve', (t) => {
   t.deepEqual(
-    oddDecider
-      .combine(evenDecider)
-      .evolve([{ oddNumber: 0 }, { evenNumber: 0 }], {
+    oddDecider.combine(evenDecider).evolve(
+      { oddNumber: 0, evenNumber: 0 },
+      {
         kind: 'OddNumberAddedEvt',
         value: 3,
-      }),
-    [{ oddNumber: 3 }, { evenNumber: 0 }]
+      }
+    ),
+    { oddNumber: 3, evenNumber: 0 }
   );
 });
 
-test('decider-decide', (t) => {
+test('odd-decider-decide', (t) => {
   t.deepEqual(
     oddDecider.decide(
       { kindOfCommand: 'AddOddNumberCmd', valueOfCommand: 1 },
@@ -212,7 +213,7 @@ test('decider-decide', (t) => {
   );
 });
 
-test('decider-decide-with-map', (t) => {
+test('odd-decider-decide-with-map', (t) => {
   t.deepEqual(
     oddDecider
       .mapContraOnCommand<OddNumberCmd | EvenNumberCmd>(
@@ -226,10 +227,10 @@ test('decider-decide-with-map', (t) => {
   );
 });
 
-test('combined-decider-decide', (t) => {
+test('combined-via-tuples-decider-decide', (t) => {
   t.deepEqual(
     oddDecider
-      .combine(evenDecider)
+      .combineViaTuples(evenDecider)
       .decide({ kindOfCommand: 'AddOddNumberCmd', valueOfCommand: 1 }, [
         { oddNumber: 0 },
         { evenNumber: 0 },
@@ -238,10 +239,10 @@ test('combined-decider-decide', (t) => {
   );
 });
 
-test('combined-decider-decide-2', (t) => {
+test('combined-decider-decide', (t) => {
   t.deepEqual(
     oddDecider
-      .combineAndIntersect(evenDecider)
+      .combine(evenDecider)
       .decide(
         { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 2 },
         { evenNumber: 0, oddNumber: 0 }

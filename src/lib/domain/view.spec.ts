@@ -137,22 +137,24 @@ test('even-view-evolve2', (t) => {
 
 test('combined-view-evolve', (t) => {
   t.deepEqual(
-    oddView.combine(evenView).evolve([{ oddState: 0 }, { evenState: 0 }], {
-      kind: 'OddNumberAddedEvt',
-      value: 1,
-    }),
-    [{ oddState: 1 }, { evenState: 0 }]
-  );
-});
-
-test('combined-and-intersected-view-evolve', (t) => {
-  t.deepEqual(
     oddView
-      .combineAndIntersect(evenView)
+      .combine(evenView)
       .evolve(
         { oddState: 0, evenState: 0 },
         { kind: 'OddNumberAddedEvt', value: 1 }
       ),
     { oddState: 1, evenState: 0 }
+  );
+});
+
+test('combined-via-tuples-view-evolve', (t) => {
+  t.deepEqual(
+    oddView
+      .combineViaTuples(evenView)
+      .evolve([{ oddState: 0 }, { evenState: 0 }], {
+        kind: 'OddNumberAddedEvt',
+        value: 1,
+      }),
+    [{ oddState: 1 }, { evenState: 0 }]
   );
 });

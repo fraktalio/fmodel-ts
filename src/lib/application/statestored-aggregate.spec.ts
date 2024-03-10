@@ -212,91 +212,99 @@ const evenSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
 // ###### Application - Repo ######
 // ################################
 
+// First variant of the storage / without Metadata
 // eslint-disable-next-line functional/no-let
-let storage: State & Version = { evenNumber: 0, oddNumber: 0, version: 0 };
-
+let stateStorage: State & Version = { evenNumber: 0, oddNumber: 0, version: 0 };
+// Second variant of the storage / with Metadata
+// eslint-disable-next-line functional/no-let
+let stateAndMetadataStorage: State & Version & StateMetadata = {
+  evenNumber: 0,
+  oddNumber: 0,
+  version: 0,
+  traceId: '',
+};
 // A type representing the version of the state
 type Version = {
   readonly version: number;
 };
-
 // A type representing all the commands
 type Cmd = EvenNumberCmd | OddNumberCmd;
 // A type representing all the events
 type Evt = EvenNumberEvt | OddNumberEvt;
 // The type representing the combined state of both: EvenState and OddState
 type State = EvenState & OddState;
+// The type representing the Command Metadata
+type CmdMetadata = { readonly traceId: string };
+// The type representing the Event Metadata
+type StateMetadata = { readonly traceId: string };
 
+// ###########################################################################
 // This version of repository has Command Metadata of type `Cmd` / same as payload `Cmd` / the intersections `Cmd & Cmd = Cmd`
 // This version of repository has State Metadata of type `State` / same as payload `State` / the intersections `State & State = State`
 class StateRepositoryImpl
   implements IStateRepository<Cmd, State, Version, Cmd, State>
 {
   async fetch(_c: Cmd): Promise<(State & Version) | null> {
-    return storage;
+    return stateStorage;
   }
   async save(s: State & Cmd): Promise<State & Version> {
-    storage = {
+    stateStorage = {
       evenNumber: s.evenNumber,
       oddNumber: s.oddNumber,
-      version: storage.version + 1,
+      version: stateStorage.version + 1,
     };
-    return storage;
+    return stateStorage;
   }
 }
-
-const repository: IStateRepository<Cmd, State, Version, Cmd, State> =
+const stateRepository: IStateRepository<Cmd, State, Version, Cmd, State> =
   new StateRepositoryImpl();
+// ###########################################################################
 
-type CmdMetadata = { readonly traceId: string };
-type StateMetadata = { readonly traceId: string };
-
-// eslint-disable-next-line functional/no-let
-let storage2: State & Version & StateMetadata = {
-  evenNumber: 0,
-  oddNumber: 0,
-  version: 0,
-  traceId: '',
-};
-
+// ###########################################################################
 // This version of repository has Command Metadata of type `CmdMetadata`  / the intersections `Cmd & CmdMetadata`
 // This version of repository has State Metadata of type `StateMetadata` / the intersections `State & StateMetadata`
-class StateRepositoryImpl2
+class StateAndMetadataRepositoryImpl
   implements IStateRepository<Cmd, State, Version, CmdMetadata, StateMetadata>
 {
   async fetch(_c: Cmd): Promise<(State & Version & StateMetadata) | null> {
-    return storage2;
+    return stateAndMetadataStorage;
   }
   async save(s: State & CmdMetadata): Promise<State & Version & StateMetadata> {
-    storage2 = {
+    stateAndMetadataStorage = {
       evenNumber: s.evenNumber,
       oddNumber: s.oddNumber,
-      version: storage2.version + 1,
+      version: stateAndMetadataStorage.version + 1,
       traceId: s.traceId,
     };
-    return storage2;
+    return stateAndMetadataStorage;
   }
 }
-
-const repository2: IStateRepository<
+const stateAndMetadataRepository: IStateRepository<
   Cmd,
   State,
   Version,
   CmdMetadata,
   StateMetadata
-> = new StateRepositoryImpl2();
+> = new StateAndMetadataRepositoryImpl();
+// ###########################################################################
 
 // ################################
 // #### Application - Aggregate ###
 // ################################
 
+// #### We demonstrate more complex cases of aggregates that are actually COMBINING multiple deciders into one big decider that can be orchestrated by the aggregate. ####
+
+// This version of the aggregate has Command Metadata of type `Cmd` / same as payload `Cmd` / the intersections `Cmd & Cmd = Cmd`
+// This version of the aggregate has State Metadata of type `State` / same as payload `State` / the intersections `State & State = State`
 const aggregate: IStateStoredAggregate<Cmd, State, Evt, Version, Cmd, State> =
   new StateStoredAggregate<Cmd, State, Evt, Version, Cmd, State>(
-    evenDecider.combineAndIntersect(oddDecider), // combining two deciders into one decider
-    repository
+    evenDecider.combine(oddDecider), // combining two deciders into one decider
+    stateRepository
   );
 
-const aggregate2: IStateStoredAggregate<
+// This version of the aggregate has Command Metadata of type `CmdMetadata`  / the intersections `Cmd & CmdMetadata`
+// This version of the aggregate has State Metadata of type `StateMetadata` / the intersections `State & StateMetadata`
+const aggregateWithMetadata: IStateStoredAggregate<
   Cmd,
   State,
   Evt,
@@ -311,8 +319,8 @@ const aggregate2: IStateStoredAggregate<
   CmdMetadata,
   StateMetadata
 >(
-  evenDecider.combineAndIntersect(oddDecider), // combining two deciders into one decider
-  repository2
+  evenDecider.combine(oddDecider), // combining two deciders into one decider
+  stateAndMetadataRepository
 );
 
 const orchestratedAggregate: IStateStoredOrchestratingAggregate<
@@ -323,11 +331,46 @@ const orchestratedAggregate: IStateStoredOrchestratingAggregate<
   Cmd,
   State
 > = new StateStoredOrchestratingAggregate<Cmd, State, Evt, Version, Cmd, State>(
-  evenDecider.combineAndIntersect(oddDecider), // combining two deciders into one decider
-  repository,
+  evenDecider.combine(oddDecider), // combining two deciders into one decider
+  stateRepository,
   evenSaga.combine(oddSaga) // combining two sagas into one saga
 );
 
+const orchestratedAggregateWithMetadata: IStateStoredOrchestratingAggregate<
+  Cmd,
+  State,
+  Evt,
+  Version,
+  CmdMetadata,
+  StateMetadata
+> = new StateStoredOrchestratingAggregate<
+  Cmd,
+  State,
+  Evt,
+  Version,
+  CmdMetadata,
+  StateMetadata
+>(
+  evenDecider.combine(oddDecider), // combining two deciders into one decider
+  stateAndMetadataRepository,
+  evenSaga.combine(oddSaga) // combining two sagas into one saga
+);
+
+test('aggregate-with-metadata-handle', async (t) => {
+  t.deepEqual(
+    await aggregateWithMetadata.handle({
+      kindOfCommand: 'AddOddNumberCmd',
+      valueOfCommand: 1,
+      traceId: '1',
+    }),
+    {
+      version: 1,
+      evenNumber: 0,
+      oddNumber: 1,
+      traceId: '1',
+    }
+  );
+});
 test('aggregate-handle', async (t) => {
   t.deepEqual(
     await aggregate.handle({
@@ -342,20 +385,6 @@ test('aggregate-handle', async (t) => {
   );
 });
 
-test('aggregate-handle2', async (t) => {
-  t.deepEqual(
-    await aggregate.handle({
-      kindOfCommand: 'AddEvenNumberCmd',
-      valueOfCommand: 2,
-    }),
-    {
-      version: 2,
-      evenNumber: 2,
-      oddNumber: 0,
-    }
-  );
-});
-
 test('orchestrated-aggregate-handle', async (t) => {
   t.deepEqual(
     await orchestratedAggregate.handle({
@@ -363,25 +392,25 @@ test('orchestrated-aggregate-handle', async (t) => {
       valueOfCommand: 1,
     }),
     {
-      version: 3,
+      version: 2,
       evenNumber: 2,
       oddNumber: 1,
     }
   );
 });
 
-test('aggregate-handle3', async (t) => {
+test('orchestrated-aggregate-with-metadata-handle', async (t) => {
   t.deepEqual(
-    await aggregate2.handle({
+    await orchestratedAggregateWithMetadata.handle({
       kindOfCommand: 'AddOddNumberCmd',
       valueOfCommand: 1,
-      traceId: '1',
+      traceId: 'trc1',
     }),
     {
-      version: 1,
-      evenNumber: 0,
+      version: 2,
+      evenNumber: 2,
       oddNumber: 1,
-      traceId: '1',
+      traceId: 'trc1',
     }
   );
 });
