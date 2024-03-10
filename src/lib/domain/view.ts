@@ -94,22 +94,11 @@ class _View<Si, So, E> {
   /**
    * Right product on S/State parameter - Applicative
    *
-   * Combines state via tuple [So, Son]
-   *
-   * @typeParam Son - New output State
-   */
-  productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, readonly [So, Son], E> {
-    return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
-  }
-
-  /**
-   * Right product on S/State parameter - Applicative
-   *
    * Combines state via intersection (So & Son)
    *
    * @typeParam Son - New output State
    */
-  productAndIntersectionOnState<Son extends object>(
+  productOnState<Son extends object>(
     fb: _View<Si, Son, E>
   ): _View<Si, So & Son, E> {
     return this.applyOnState(
@@ -118,23 +107,16 @@ class _View<Si, So, E> {
   }
 
   /**
-   * Combines multiple Views into one View.
+   * Right product on S/State parameter - Applicative
    *
-   * Combines state via tuple [So, Son].
+   * Combines state via tuple [So, Son]
    *
+   * @typeParam Son - New output State
    */
-  combine<Si2, So2, E2>(
-    y: _View<Si2, So2, E2>
-  ): _View<readonly [Si, Si2], readonly [So, So2], E | E2> {
-    const viewX = this.mapContraOnEvent<E | E2>(
-      (en) => en as unknown as E
-    ).mapContraOnState<readonly [Si, Si2]>((sin) => sin[0]);
-
-    const viewY = y
-      .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
-      .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1]);
-
-    return viewX.productOnState(viewY);
+  productViaTuplesOnState<Son>(
+    fb: _View<Si, Son, E>
+  ): _View<Si, readonly [So, Son], E> {
+    return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
   }
 
   /**
@@ -143,7 +125,7 @@ class _View<Si, So, E> {
    * Combines state via intersection (So & Son)
    *
    */
-  combineAndIntersect<Si2 extends object, So2 extends object, E2>(
+  combine<Si2 extends object, So2 extends object, E2>(
     y: _View<Si2, So2, E2>
   ): _View<Si & Si2, So & So2, E | E2> {
     const viewX = this.mapContraOnEvent<E | E2>(
@@ -154,7 +136,27 @@ class _View<Si, So, E> {
       .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
       .mapContraOnState<Si & Si2>((sin) => sin);
 
-    return viewX.productAndIntersectionOnState(viewY);
+    return viewX.productOnState(viewY);
+  }
+
+  /**
+   * Combines multiple Views into one View.
+   *
+   * Combines state via tuple [So, Son].
+   *
+   */
+  combineViaTuples<Si2, So2, E2>(
+    y: _View<Si2, So2, E2>
+  ): _View<readonly [Si, Si2], readonly [So, So2], E | E2> {
+    const viewX = this.mapContraOnEvent<E | E2>(
+      (en) => en as unknown as E
+    ).mapContraOnState<readonly [Si, Si2]>((sin) => sin[0]);
+
+    const viewY = y
+      .mapContraOnEvent<E | E2>((en2) => en2 as unknown as E2)
+      .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1]);
+
+    return viewX.productViaTuplesOnState(viewY);
   }
 }
 
@@ -257,7 +259,7 @@ export class View<S, E> implements IView<S, E> {
   /**
    * Combines Views into one bigger View - Monoid
    *
-   * Combines state via tuple [S, S2]. Check alternative method `combineAndIntersect`
+   * Combines state via intersection (S & S2). Check alternative method `combineViaTuples`.
    *
    * 1. Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
    *
@@ -265,7 +267,7 @@ export class View<S, E> implements IView<S, E> {
    *
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
-  combine<S2, E2>(view2: View<S2, E2>): View<readonly [S, S2], E | E2> {
+  combine<S2 extends object, E2>(view2: View<S2, E2>): View<S & S2, E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combine(
         new _View(view2.evolve, view2.initialState)
@@ -276,7 +278,7 @@ export class View<S, E> implements IView<S, E> {
   /**
    * Combines Views into one bigger View - Monoid
    *
-   * Combines state via intersection (S & S2). Check alternative method `combine`.
+   * Combines state via tuple [S, S2]. Check alternative method `combine`
    *
    * 1. Flexibility: If you anticipate needing to access individual components of the combined state separately, using tuples might be more appropriate, as it allows you to maintain separate types for each component. However, if you primarily need to treat the combined state as a single entity with all properties accessible at once, intersections might be more suitable.
    *
@@ -284,11 +286,11 @@ export class View<S, E> implements IView<S, E> {
    *
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
-  combineAndIntersect<S2 extends object, E2>(
+  combineViaTuples<S2, E2>(
     view2: View<S2, E2>
-  ): View<S & S2, E | E2> {
+  ): View<readonly [S, S2], E | E2> {
     return asView(
-      new _View(this.evolve, this.initialState).combineAndIntersect(
+      new _View(this.evolve, this.initialState).combineViaTuples(
         new _View(view2.evolve, view2.initialState)
       )
     );

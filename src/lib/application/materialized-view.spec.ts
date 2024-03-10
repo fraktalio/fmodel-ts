@@ -37,6 +37,7 @@ type OddNumberMultipliedEvt = {
   readonly kind: 'OddNumberMultipliedEvt';
 };
 
+// A type representing the events for the Odd numbers
 type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
 
 type EvenNumberAddedEvt = {
@@ -49,21 +50,24 @@ type EvenNumberMultipliedEvt = {
   readonly kind: 'EvenNumberMultipliedEvt';
 };
 
+// A type representing the events for the Odd numbers
 type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
+// A type representing all events of the system
 type Event = OddNumberEvt | EvenNumberEvt;
 
-// A type representing the state of the view
-
+// A type representing the state of the view for Even numbers
 type EvenViewState = {
   readonly evenState: number;
 };
-
+// A type representing the state of the view for Odd numbers
 type OddViewState = {
   readonly oddState: number;
 };
 
+// Combined View state of the system
 type ViewState = EvenViewState & OddViewState;
 
+// View for the Even numbers
 const evenView: View<EvenViewState, EvenNumberEvt> = new View<
   EvenViewState,
   EvenNumberEvt
@@ -86,6 +90,7 @@ const evenView: View<EvenViewState, EvenNumberEvt> = new View<
   { evenState: 0 }
 );
 
+// View for the Odd numbers
 const oddView: View<OddViewState, OddNumberEvt> = new View<
   OddViewState,
   OddNumberEvt
@@ -107,22 +112,28 @@ const oddView: View<OddViewState, OddNumberEvt> = new View<
   { oddState: 0 }
 );
 
+// ############################################
+// ############## Repository ##################
+// ############################################
+
 // A type representing the version
 type Version = {
   readonly version: number;
 };
+// A type representing the event metadata
+type EventMetadata = { readonly traceId: string };
 
 // eslint-disable-next-line functional/no-let
 let storage: (ViewState & Version) | null = null;
 
 class ViewStateRepositoryImpl
-  implements IViewStateRepository<Event, ViewState, Version, Event>
+  implements IViewStateRepository<Event, ViewState, Version, EventMetadata>
 {
   async fetch(_e: Event): Promise<(ViewState & Version) | null> {
     return storage;
   }
   async save(
-    s: ViewState & Event,
+    s: ViewState & EventMetadata,
     v: Version | null
   ): Promise<ViewState & Version> {
     storage = {
@@ -133,19 +144,33 @@ class ViewStateRepositoryImpl
     return storage;
   }
 }
+const repository: IViewStateRepository<
+  Event,
+  ViewState,
+  Version,
+  EventMetadata
+> = new ViewStateRepositoryImpl();
 
-const repository: IViewStateRepository<Event, ViewState, Version, Event> =
-  new ViewStateRepositoryImpl();
-
-const materializedView: IMaterializedView<ViewState, Event, Version, Event> =
-  new MaterializedView<ViewState, Event, Version, Event>(
-    evenView.combineAndIntersect(oddView),
-    repository
-  );
+// ############################################
+// ########## Materialized View ###############
+// ############################################
+const materializedView: IMaterializedView<
+  ViewState,
+  Event,
+  Version,
+  EventMetadata
+> = new MaterializedView<ViewState, Event, Version, EventMetadata>(
+  evenView.combine(oddView),
+  repository
+);
 
 test('view-handle', async (t) => {
   t.deepEqual(
-    await materializedView.handle({ kind: 'EvenNumberAddedEvt', value: 2 }),
+    await materializedView.handle({
+      kind: 'EvenNumberAddedEvt',
+      value: 2,
+      traceId: 'trc1',
+    }),
     { evenState: 2, oddState: 0, version: 1 }
   );
 });

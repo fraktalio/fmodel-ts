@@ -50,8 +50,9 @@ type MultiplyEvenNumberCmd = {
   readonly valueOfCommand: number;
 };
 
+// Type that represents all Odd number commands
 type OddNumberCmd = AddOddNumberCmd | MultiplyOddNumberCmd;
-
+// Type that represents all Even number commands
 type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 
 // ################################
@@ -68,8 +69,6 @@ type OddNumberMultipliedEvt = {
   readonly kind: 'OddNumberMultipliedEvt';
 };
 
-type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
-
 type EvenNumberAddedEvt = {
   readonly value: number;
   readonly kind: 'EvenNumberAddedEvt';
@@ -80,55 +79,26 @@ type EvenNumberMultipliedEvt = {
   readonly kind: 'EvenNumberMultipliedEvt';
 };
 
+// Type that represents all Odd number events
+type OddNumberEvt = OddNumberAddedEvt | OddNumberMultipliedEvt;
+// Type that represents all Even number events
 type EvenNumberEvt = EvenNumberAddedEvt | EvenNumberMultipliedEvt;
 
 // ################################
 // ###### Domain - Deciders #######
 // ################################
 
-// A current state of the Even number(s)
-type EvenState = {
-  readonly evenNumber: number;
-};
-
 // A current state of the Odd number(s)
 type OddState = {
   readonly oddNumber: number;
 };
 
-const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
-  new Decider<EvenNumberCmd, EvenState, EvenNumberEvt>(
-    (c, _) => {
-      switch (c.kindOfCommand) {
-        case 'AddEvenNumberCmd':
-          return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
-        case 'MultiplyEvenNumberCmd':
-          return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
-        default:
-          // Exhaustive matching of the command type
-          // eslint-disable-next-line no-case-declarations
-          const _: never = c;
-          console.log('Never just happened in decide function: ' + _);
-          return [];
-      }
-    },
-    (s, e) => {
-      switch (e.kind) {
-        case 'EvenNumberAddedEvt':
-          return { evenNumber: s.evenNumber + e.value };
-        case 'EvenNumberMultipliedEvt':
-          return { evenNumber: s.evenNumber * e.value };
-        default:
-          // Exhaustive matching of the event type
-          // eslint-disable-next-line no-case-declarations
-          const _: never = e;
-          console.log('Never just happened in evolve function: ' + _);
-          return { evenNumber: s.evenNumber };
-      }
-    },
-    { evenNumber: 0 }
-  );
+// A current state of the Even number(s)
+type EvenState = {
+  readonly evenNumber: number;
+};
 
+// A decider / decision-making component for Odd numbers only
 const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
   OddNumberCmd,
   OddState,
@@ -165,10 +135,45 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
   { oddNumber: 0 }
 );
 
+// A decider / decision-making component for Even numbers only
+const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
+  new Decider<EvenNumberCmd, EvenState, EvenNumberEvt>(
+    (c, _) => {
+      switch (c.kindOfCommand) {
+        case 'AddEvenNumberCmd':
+          return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
+        case 'MultiplyEvenNumberCmd':
+          return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
+        default:
+          // Exhaustive matching of the command type
+          // eslint-disable-next-line no-case-declarations
+          const _: never = c;
+          console.log('Never just happened in decide function: ' + _);
+          return [];
+      }
+    },
+    (s, e) => {
+      switch (e.kind) {
+        case 'EvenNumberAddedEvt':
+          return { evenNumber: s.evenNumber + e.value };
+        case 'EvenNumberMultipliedEvt':
+          return { evenNumber: s.evenNumber * e.value };
+        default:
+          // Exhaustive matching of the event type
+          // eslint-disable-next-line no-case-declarations
+          const _: never = e;
+          console.log('Never just happened in evolve function: ' + _);
+          return { evenNumber: s.evenNumber };
+      }
+    },
+    { evenNumber: 0 }
+  );
+
 // ################################
 // ####### Domain - Sagas #########
 // ################################
 
+// A saga component for Odd numbers only
 const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   OddNumberEvt,
   EvenNumberCmd
@@ -197,6 +202,7 @@ const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
   }
 });
 
+// A saga component for Odd numbers only
 const evenSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
   EvenNumberEvt,
   OddNumberCmd
@@ -208,34 +214,44 @@ const evenSaga: Saga<EvenNumberEvt, OddNumberCmd> = new Saga<
 // ###### Application - Repo ######
 // ################################
 
-const storage: readonly (Evt & Version)[] = [];
+// A very simple storage/DB
+const storage: readonly (Evt & Version & EvtMetadata)[] = [];
 
 // A type representing the version
 type Version = {
   readonly version: number;
 };
-
+// A type representing the command metadata
+type CmdMetadata = { readonly traceId: string };
+// A type representing the event metadata
+type EvtMetadata = { readonly traceId: string };
+// A type representing all the commands of the system
 type Cmd = EvenNumberCmd | OddNumberCmd;
+// A type representing all the events of the system
 type Evt = EvenNumberEvt | OddNumberEvt;
 
+// An implementation if the event repository
 class EventRepositoryImpl
-  implements IEventRepository<Cmd, Evt, Version, Cmd, Evt>
+  implements IEventRepository<Cmd, Evt, Version, CmdMetadata, EvtMetadata>
 {
-  async fetch(_c: Cmd): Promise<readonly (Evt & Version)[]> {
+  async fetch(_c: Cmd): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     return storage;
   }
 
   async save(
-    eList: readonly (Evt & Cmd)[],
+    eList: readonly (Evt & CmdMetadata)[],
     versionProvider: (e: Evt) => Promise<Version | null>
-  ): Promise<readonly (Evt & Version)[]> {
-    const savedEvents: readonly (Evt & Version)[] = await Promise.all(
-      eList.map(async (e: Evt, index) => ({
-        kind: e.kind,
-        value: e.value,
-        version: ((await versionProvider(e))?.version ?? 0) + index + 1,
-      }))
-    );
+  ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
+    //mapping the Commands metadata into Events metadata !!!
+    const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
+      await Promise.all(
+        eList.map(async (e: Evt & CmdMetadata, index) => ({
+          kind: e.kind,
+          value: e.value,
+          version: ((await versionProvider(e))?.version ?? 0) + index + 1,
+          traceId: e.traceId,
+        }))
+      );
     storage.concat(savedEvents);
     return savedEvents;
   }
@@ -245,60 +261,95 @@ class EventRepositoryImpl
   }
 }
 
-const repository: IEventRepository<Cmd, Evt, Version, Cmd, Evt> =
-  new EventRepositoryImpl();
+const repository: IEventRepository<
+  Cmd,
+  Evt,
+  Version,
+  CmdMetadata,
+  EvtMetadata
+> = new EventRepositoryImpl();
 
 // ################################
 // ### Application - Aggregates ###
 // ################################
 
+// #######################################################################################################################################################################
+// #### We demonstrate more complex cases of aggregates that are actually COMBINING multiple deciders into one big decider that can be orchestrated by the aggregate. ####
+// #### The choice of how we are combining them: `combine`/intersection/OddState & EvenState; OR `combineViaTuples`/tuples/readonly [EvenState, OddState]             ####
+// #### does not make a big difference for the Event Sourcing aggregate, as the State is not exposed to the outside, only Events and Commands are.                    ####
+// #######################################################################################################################################################################
+
+// An aggregate that combines (via INTERSECTION) all deciders under one big that can handle all type of commands
 const aggregate: IEventSourcingAggregate<
   Cmd,
   OddState & EvenState,
   Evt,
   Version,
-  Cmd,
-  Evt
+  CmdMetadata,
+  EvtMetadata
 > = new EventSourcingAggregate<
   Cmd,
   OddState & EvenState,
   Evt,
   Version,
-  Cmd,
-  Evt
->(evenDecider.combineAndIntersect(oddDecider), repository);
+  CmdMetadata,
+  EvtMetadata
+>(evenDecider.combine(oddDecider), repository);
 
-const aggregate2: IEventSourcingAggregate<
+// An aggregate that combines (via TUPLES) all deciders under one big that can handle all type of commands
+const aggregateViaTuple: IEventSourcingAggregate<
   Cmd,
   readonly [EvenState, OddState],
   Evt,
   Version,
-  Cmd,
-  Evt
+  CmdMetadata,
+  EvtMetadata
 > = new EventSourcingAggregate<
   Cmd,
   readonly [EvenState, OddState],
   Evt,
   Version,
-  Cmd,
-  Evt
->(evenDecider.combine(oddDecider), repository);
+  CmdMetadata,
+  EvtMetadata
+>(evenDecider.combineViaTuples(oddDecider), repository);
 
-const aggregate3: IEventSourcingOrchestratingAggregate<
+// An aggregate that combines (via INTERSECTION) all deciders and SAGAS under one aggregate that can handle all type of commands
+const aggregateOrchestrating: IEventSourcingOrchestratingAggregate<
+  Cmd,
+  EvenState & OddState,
+  Evt,
+  Version,
+  CmdMetadata,
+  EvtMetadata
+> = new EventSourcingOrchestratingAggregate<
+  Cmd,
+  EvenState & OddState,
+  Evt,
+  Version,
+  CmdMetadata,
+  EvtMetadata
+>(evenDecider.combine(oddDecider), repository, oddSaga.combine(evenSaga));
+
+// An aggregate that combines (via TUPLES) all deciders and SAGAS under one aggregate that can handle all type of commands
+const aggregateViaTupleOrchestrating: IEventSourcingOrchestratingAggregate<
   Cmd,
   readonly [EvenState, OddState],
   Evt,
   Version,
-  Cmd,
-  Evt
+  CmdMetadata,
+  EvtMetadata
 > = new EventSourcingOrchestratingAggregate<
   Cmd,
   readonly [EvenState, OddState],
   Evt,
   Version,
-  Cmd,
-  Evt
->(evenDecider.combine(oddDecider), repository, oddSaga.combine(evenSaga));
+  CmdMetadata,
+  EvtMetadata
+>(
+  evenDecider.combineViaTuples(oddDecider),
+  repository,
+  oddSaga.combine(evenSaga)
+);
 
 // ################################
 // ############ Tests #############
@@ -309,8 +360,9 @@ test('aggregate-handle', async (t) => {
     await aggregate.handle({
       kindOfCommand: 'AddOddNumberCmd',
       valueOfCommand: 1,
+      traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt' }]
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }]
   );
 });
 
@@ -319,40 +371,58 @@ test('aggregate-handle2', async (t) => {
     await aggregate.handle({
       kindOfCommand: 'AddEvenNumberCmd',
       valueOfCommand: 2,
+      traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt' }]
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }]
   );
 });
 
-test('aggregate-handle3', async (t) => {
+test('aggregate-via-tuples-handle', async (t) => {
   t.deepEqual(
-    await aggregate2.handle({
+    await aggregateViaTuple.handle({
       kindOfCommand: 'AddOddNumberCmd',
       valueOfCommand: 1,
+      traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt' }]
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }]
   );
 });
 
-test('aggregate-handle4', async (t) => {
+test('aggregate-via-tuples-handle2', async (t) => {
   t.deepEqual(
-    await aggregate2.handle({
+    await aggregateViaTuple.handle({
       kindOfCommand: 'AddEvenNumberCmd',
       valueOfCommand: 2,
+      traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt' }]
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }]
   );
 });
 
-test('aggregate-handle5', async (t) => {
+test('aggregate-orchestrating-handle', async (t) => {
   t.deepEqual(
-    await aggregate3.handle({
+    await aggregateOrchestrating.handle({
       kindOfCommand: 'AddOddNumberCmd',
       valueOfCommand: 3,
+      traceId: 'trc1',
     }),
     [
-      { value: 3, version: 1, kind: 'OddNumberAddedEvt' },
-      { value: 4, version: 2, kind: 'EvenNumberAddedEvt' },
+      { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
+      { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
+    ]
+  );
+});
+
+test('aggregate-via-tuples-orchestrating-handle', async (t) => {
+  t.deepEqual(
+    await aggregateViaTupleOrchestrating.handle({
+      kindOfCommand: 'AddOddNumberCmd',
+      valueOfCommand: 3,
+      traceId: 'trc1',
+    }),
+    [
+      { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
+      { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
     ]
   );
 });
