@@ -2,6 +2,13 @@
 
 [![CI with Node/NPM - Test and Build](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml/badge.svg)](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml)
 
+> v2.0.0 of the library is introducing breaking changes. [Check the PR](https://github.com/fraktalio/fmodel-ts/pull/692)!
+> Besides keeping the focus on separating data from behavior, we want to split the responsibilities between the domain and application/adapter layers better.
+> For example, `metadata types` exist only on the application layer, not leaking into the domain, as these don't benefit core logic. Example: `traceId`, `correlationId`, ...
+> 
+> The library will use `alpha` channel until it reach production ready quality. It will happen soon! We need more tests, better documentation and clear upgrade roadmap (`1.0.0` -> `2.0.0`).
+> To keep it simple, `v2.*.*` will use the main branch going forward. [v1.*.*](https://github.com/fraktalio/fmodel-ts/tree/v1) will continue to be supported (bugs only, no new features)
+
 When you’re developing an information system to automate the activities of the business, you are modeling the business.
 The abstractions that you design, the behaviors that you implement, and the UI interactions that you build all reflect
 the business — together, they constitute the model of the domain.
@@ -184,7 +191,7 @@ In TypeScript, we can use ADTs to model our application's domain entities and re
 TypeScript has two main types of ADTs: union types (`"|"` operator), intersection types (`"&"` operator), tuples and records
 
 - `union types` is used to define a type that can take on one of several possible variants - modeling a `sum/OR` type.
-- `intersection types`, `tuples` and `records` are used to combines several types into one - modeling a `product/AND` type.
+- `intersection types`, `tuples` and `records` are used to combine several types into one - modeling a `product/AND` type.
 
 ADTs will help with
 
