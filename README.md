@@ -480,7 +480,7 @@ export type ApplicationAggregate = EventSourcingAggregate<
 const command: Command = JSON.parse(await req.json());
 console.log("Handling command: ", command);
 // We can combine deciders to create a new decider that can handle both restaurant and order commands
-const decider = restaurantDecider.combineAndIntersect(orderDecider);
+const decider = restaurantDecider.combine(orderDecider);
 // Create a repository for the events of all types
 const eventRepository = new EventRepository(supabaseClient);
 // Create an aggregate to handle the commands of all types!
