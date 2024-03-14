@@ -88,8 +88,8 @@ type OddState = {
 };
 
 // Even number decider - It works with even numbers only
-const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
-  new Decider<EvenNumberCmd, EvenState, EvenNumberEvt>(
+const evenDecider: Decider<EvenNumberCmd, EvenState | null, EvenNumberEvt> =
+  new Decider<EvenNumberCmd, EvenState | null, EvenNumberEvt>(
     (c, _) => {
       switch (c.kindOfCommand) {
         case 'AddEvenNumberCmd':
@@ -107,14 +107,14 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
     (s, e) => {
       switch (e.kind) {
         case 'EvenNumberAddedEvt':
-          return { evenNumber: s.evenNumber + e.value };
+          return { evenNumber: (s?.evenNumber ?? 0) + e.value };
         case 'EvenNumberMultipliedEvt':
-          return { evenNumber: s.evenNumber * e.value };
+          return { evenNumber: (s?.evenNumber ?? 0) * e.value };
         default: {
           // Exhaustive matching of the event type
           const _: never = e;
           console.log('Never just happened in evolve function: ' + _);
-          return { evenNumber: s.evenNumber };
+          return { evenNumber: s?.evenNumber ?? 0 };
         }
       }
     },
@@ -122,41 +122,38 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
   );
 
 // Odd number decider - It works with odd numbers only
-const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
-  OddNumberCmd,
-  OddState,
-  OddNumberEvt
->(
-  (c, _) => {
-    switch (c.kindOfCommand) {
-      case 'AddOddNumberCmd':
-        return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
-      case 'MultiplyOddNumberCmd':
-        return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
-      default: {
-        // Exhaustive matching of the command type
-        const _: never = c;
-        console.log('Never just happened in decide function: ' + _);
-        return [];
+const oddDecider: Decider<OddNumberCmd, OddState | null, OddNumberEvt> =
+  new Decider<OddNumberCmd, OddState | null, OddNumberEvt>(
+    (c, _) => {
+      switch (c.kindOfCommand) {
+        case 'AddOddNumberCmd':
+          return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
+        case 'MultiplyOddNumberCmd':
+          return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
+        default: {
+          // Exhaustive matching of the command type
+          const _: never = c;
+          console.log('Never just happened in decide function: ' + _);
+          return [];
+        }
       }
-    }
-  },
-  (s, e) => {
-    switch (e.kind) {
-      case 'OddNumberAddedEvt':
-        return { oddNumber: s.oddNumber + e.value };
-      case 'OddNumberMultipliedEvt':
-        return { oddNumber: s.oddNumber * e.value };
-      default: {
-        // Exhaustive matching of the event type
-        const _: never = e;
-        console.log('Never just happened in evolve function: ' + _);
-        return { oddNumber: s.oddNumber };
+    },
+    (s, e) => {
+      switch (e.kind) {
+        case 'OddNumberAddedEvt':
+          return { oddNumber: (s?.oddNumber ?? 0) + e.value };
+        case 'OddNumberMultipliedEvt':
+          return { oddNumber: (s?.oddNumber ?? 0) * e.value };
+        default: {
+          // Exhaustive matching of the event type
+          const _: never = e;
+          console.log('Never just happened in evolve function: ' + _);
+          return { oddNumber: s?.oddNumber ?? 0 };
+        }
       }
-    }
-  },
-  { oddNumber: 0 }
-);
+    },
+    { oddNumber: 0 }
+  );
 
 test('odd-decider-evolve', (t) => {
   t.deepEqual(

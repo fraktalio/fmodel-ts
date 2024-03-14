@@ -122,7 +122,7 @@ class _Decider<C, Si, So, Ei, Eo> {
    *
    * @typeParam Son - New output State
    */
-  productOnState<Son extends object>(
+  productOnState<Son>(
     fb: _Decider<C, Si, Son, Ei, Eo>
   ): _Decider<C, Si, So & Son, Ei, Eo> {
     return this.applyOnState(
@@ -149,7 +149,7 @@ class _Decider<C, Si, So, Ei, Eo> {
    *
    * The States/S are combined via `intersection`
    */
-  combine<C2, Si2 extends object, So2 extends object, Ei2, Eo2>(
+  combine<C2, Si2, So2, Ei2, Eo2>(
     y: _Decider<C2, Si2, So2, Ei2, Eo2>
   ): _Decider<C | C2, Si & Si2, So & So2, Ei | Ei2, Eo | Eo2> {
     const deciderX = this.mapContraOnCommand<C | C2>((c) => c as C)
@@ -399,7 +399,7 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
    *
    * Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
-  combine<C2, S2 extends object, E2>(
+  combine<C2, S2, E2>(
     decider2: Decider<C2, S2, E2>
   ): Decider<C | C2, S & S2, E | E2> {
     return asDecider(

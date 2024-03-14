@@ -98,9 +98,7 @@ class _View<Si, So, E> {
    *
    * @typeParam Son - New output State
    */
-  productOnState<Son extends object>(
-    fb: _View<Si, Son, E>
-  ): _View<Si, So & Son, E> {
+  productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, So & Son, E> {
     return this.applyOnState(
       fb.mapOnState((b: Son) => (a: So) => ({ ...(a as So), ...(b as Son) }))
     );
@@ -125,7 +123,7 @@ class _View<Si, So, E> {
    * Combines state via intersection (So & Son)
    *
    */
-  combine<Si2 extends object, So2 extends object, E2>(
+  combine<Si2, So2, E2>(
     y: _View<Si2, So2, E2>
   ): _View<Si & Si2, So & So2, E | E2> {
     const viewX = this.mapContraOnEvent<E | E2>(
@@ -267,7 +265,7 @@ export class View<S, E> implements IView<S, E> {
    *
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
-  combine<S2 extends object, E2>(view2: View<S2, E2>): View<S & S2, E | E2> {
+  combine<S2, E2>(view2: View<S2, E2>): View<S & S2, E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combine(
         new _View(view2.evolve, view2.initialState)
