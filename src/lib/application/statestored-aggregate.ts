@@ -42,10 +42,15 @@ export interface IStateRepository<C, S, V, CM, SM> {
    * You can update/save the item/state, but only if the `version` number in the storage has not changed.
    *
    * @param state - State with Command Metadata of type `S & CM`
+   * @param commandMetadata - Command Metadata of the command that initiated the `state`
    * @param version - The current version of the state
    * @return newly saved State of type `S & V & SM`
    */
-  readonly save: (state: S & CM, version: V | null) => Promise<S & V & SM>;
+  readonly save: (
+    state: S,
+    commandMetadata: CM,
+    version: V | null
+  ) => Promise<S & V & SM>;
 }
 
 /**
@@ -175,8 +180,12 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
     return this.stateRepository.fetch(command);
   }
 
-  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
-    return this.stateRepository.save(state, version);
+  async save(
+    state: S,
+    commandMetadata: CM,
+    version: V | null
+  ): Promise<S & V & SM> {
+    return this.stateRepository.save(state, commandMetadata, version);
   }
 
   async handle(command: C & CM): Promise<S & V & SM> {
@@ -186,7 +195,8 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
       command
     );
     return this.stateRepository.save(
-      { ...newState, ...(command as CM) },
+      newState,
+      command as CM,
       currentState as V
     );
   }
@@ -224,8 +234,12 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
     return this.stateRepository.fetch(command);
   }
 
-  async save(state: S & CM, version: V | null): Promise<S & V & SM> {
-    return this.stateRepository.save(state, version);
+  async save(
+    state: S,
+    commandMetadata: CM,
+    version: V | null
+  ): Promise<S & V & SM> {
+    return this.stateRepository.save(state, commandMetadata, version);
   }
 
   async handle(command: C & CM): Promise<S & V & SM> {
@@ -235,7 +249,8 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
       command
     );
     return this.stateRepository.save(
-      { ...newState, ...(command as CM) },
+      newState,
+      command as CM,
       currentState as V
     );
   }

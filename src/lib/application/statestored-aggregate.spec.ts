@@ -247,7 +247,7 @@ class StateRepositoryImpl
   async fetch(_c: Cmd): Promise<(State & Version) | null> {
     return stateStorage;
   }
-  async save(s: State & Cmd): Promise<State & Version> {
+  async save(s: State, _: Cmd): Promise<State & Version> {
     stateStorage = {
       evenNumber: s.evenNumber,
       oddNumber: s.oddNumber,
@@ -269,12 +269,15 @@ class StateAndMetadataRepositoryImpl
   async fetch(_c: Cmd): Promise<(State & Version & StateMetadata) | null> {
     return stateAndMetadataStorage;
   }
-  async save(s: State & CmdMetadata): Promise<State & Version & StateMetadata> {
+  async save(
+    s: State,
+    cm: CmdMetadata
+  ): Promise<State & Version & StateMetadata> {
     stateAndMetadataStorage = {
       evenNumber: s.evenNumber,
       oddNumber: s.oddNumber,
       version: stateAndMetadataStorage.version + 1,
-      traceId: s.traceId,
+      traceId: cm.traceId,
     };
     return stateAndMetadataStorage;
   }
