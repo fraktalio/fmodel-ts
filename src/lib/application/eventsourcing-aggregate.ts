@@ -31,11 +31,11 @@ export interface IEventRepository<C, E, V, CM, EM> {
   /**
    * Fetch events
    *
-   * @param command - Command of type `C`
+   * @param command - Command of type `C` with metadata of type `CM`
    *
    * @return list of Events with Version and Event Metadata
    */
-  readonly fetch: (command: C) => Promise<readonly (E & V & EM)[]>;
+  readonly fetch: (command: C & CM) => Promise<readonly (E & V & EM)[]>;
 
   /**
    * Get the latest event stream version / sequence
@@ -138,7 +138,7 @@ export abstract class EventComputation<C, S, E> implements IDecider<C, S, E> {
  * An abstract algorithm to compute new events based on the old events and the command being handled.
  * It returns all the events, including the events created by handling commands which are triggered by Saga - orchestration included.
  */
-export abstract class EventOrchestratingComputation<C, S, E>
+export abstract class EventOrchestratingComputation<C, S, E, CM>
   implements IDecider<C, S, E>, ISaga<E, C>
 {
   protected constructor(
@@ -175,8 +175,8 @@ export abstract class EventOrchestratingComputation<C, S, E>
 
   protected async computeNewEvents(
     events: readonly E[],
-    command: C,
-    fetch: (c: C) => Promise<readonly E[]>
+    command: C & CM,
+    fetch: (c: C & CM) => Promise<readonly E[]>
   ): Promise<readonly E[]> {
     // eslint-disable-next-line functional/no-let
     let resultingEvents = this.computeNewEventsInternally(events, command);
@@ -222,7 +222,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
     super(decider);
   }
 
-  async fetch(command: C): Promise<readonly (E & V & EM)[]> {
+  async fetch(command: C & CM): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.fetch(command);
   }
 
@@ -268,7 +268,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
-  extends EventOrchestratingComputation<C, S, E>
+  extends EventOrchestratingComputation<C, S, E, CM>
   implements IEventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
 {
   constructor(
@@ -279,7 +279,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
     super(decider, saga);
   }
 
-  async fetch(command: C): Promise<readonly (E & V & EM)[]> {
+  async fetch(command: C & CM): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.fetch(command);
   }
 
@@ -301,7 +301,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
         await this.computeNewEvents(
           currentEvents,
           command,
-          async (cmd: C) => await this.eventRepository.fetch(cmd)
+          async (cmd: C & CM) => await this.eventRepository.fetch(cmd)
         )
       ).map((event) => ({
         ...event,
