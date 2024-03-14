@@ -133,7 +133,8 @@ class ViewStateRepositoryImpl
     return storage;
   }
   async save(
-    s: ViewState & EventMetadata,
+    s: ViewState,
+    _: EventMetadata,
     v: Version | null
   ): Promise<ViewState & Version> {
     storage = {

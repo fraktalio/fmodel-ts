@@ -239,17 +239,18 @@ class EventRepositoryImpl
   }
 
   async save(
-    eList: readonly (Evt & CmdMetadata)[],
+    eList: readonly Evt[],
+    commandMetadata: CmdMetadata,
     versionProvider: (e: Evt) => Promise<Version | null>
   ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     //mapping the Commands metadata into Events metadata !!!
     const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
       await Promise.all(
-        eList.map(async (e: Evt & CmdMetadata, index) => ({
+        eList.map(async (e: Evt, index) => ({
           kind: e.kind,
           value: e.value,
           version: ((await versionProvider(e))?.version ?? 0) + index + 1,
-          traceId: e.traceId,
+          traceId: commandMetadata.traceId,
         }))
       );
     storage.concat(savedEvents);

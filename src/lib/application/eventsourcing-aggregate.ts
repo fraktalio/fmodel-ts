@@ -49,12 +49,14 @@ export interface IEventRepository<C, E, V, CM, EM> {
   /**
    * Save events
    *
-   * @param events - list of Events with Command Metadata
+   * @param events - list of Events
+   * @param commandMetadata - Command Metadata of the command that initiated `events`
    * @param versionProvider - A provider for the Latest Event in this stream and its Version/Sequence
    * @return  a list of newly saved Event(s) of type `E` with Version of type `V` and with Event Metadata of type `EM`
    */
   readonly save: (
-    events: readonly (E & CM)[],
+    events: readonly E[],
+    commandMetadata: CM,
     versionProvider: (e: E) => Promise<V | null>
   ) => Promise<readonly (E & V & EM)[]>;
 }
@@ -231,20 +233,19 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
   }
 
   async save(
-    events: readonly (E & CM)[],
+    events: readonly E[],
+    commandMetadata: CM,
     versionProvider: (e: E) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(events, versionProvider);
+    return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
 
   async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
     const currentEvents = await this.eventRepository.fetch(command);
 
     return this.eventRepository.save(
-      this.computeNewEvents(currentEvents, command).map((evt) => ({
-        ...evt,
-        ...command,
-      })),
+      this.computeNewEvents(currentEvents, command),
+      command,
       async () => currentEvents[currentEvents.length - 1]
     );
   }
@@ -288,25 +289,22 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
   }
 
   async save(
-    events: readonly (E & CM)[],
+    events: readonly E[],
+    commandMetadata: CM,
     versionProvider: (e: E) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(events, versionProvider);
+    return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
 
   async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
     const currentEvents = await this.eventRepository.fetch(command);
     return this.eventRepository.save(
-      (
-        await this.computeNewEvents(
-          currentEvents,
-          command,
-          async (cmd: C & CM) => await this.eventRepository.fetch(cmd)
-        )
-      ).map((event) => ({
-        ...event,
-        ...command,
-      })),
+      await this.computeNewEvents(
+        currentEvents,
+        command,
+        async (cmd: C & CM) => await this.eventRepository.fetch(cmd)
+      ),
+      command,
       this.versionProvider.bind(this)
     );
   }
