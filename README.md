@@ -2,6 +2,34 @@
 
 [![CI with Node/NPM - Test and Build](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml/badge.svg)](https://github.com/fraktalio/fmodel-ts/actions/workflows/node-test-build.yml)
 
+<!-- TOC -->
+* [**f`(`model`)`** - Functional Domain Modeling with TypeScript](#fmodel---functional-domain-modeling-with-typescript)
+  * [`IOR<Library, Inspiration>`](#iorlibrary-inspiration)
+  * [`(command: C, state: S) => readonly E[]`](#command-c-state-s--readonly-e)
+  * [`(state: S, event: E) => S`](#state-s-event-e--s)
+  * [Event-sourced or State-stored systems](#event-sourced-or-state-stored-systems)
+  * [Decider](#decider)
+    * [Event-sourcing aggregate](#event-sourcing-aggregate)
+    * [State-stored aggregate](#state-stored-aggregate)
+  * [View](#view)
+    * [Materialized View](#materialized-view)
+  * [Saga](#saga)
+    * [Saga Manager](#saga-manager)
+  * [Algebraic Data Types](#algebraic-data-types)
+    * [`C` / Command / Intent to change the state of the system](#c--command--intent-to-change-the-state-of-the-system)
+    * [`E` / Event / Fact](#e--event--fact)
+    * [`S` / State / Current state of the system/aggregate/entity](#s--state--current-state-of-the-systemaggregateentity)
+  * [Modeling the Behaviour of our domain](#modeling-the-behaviour-of-our-domain)
+      * [Decider - data type that represents the main decision-making algorithm.](#decider---data-type-that-represents-the-main-decision-making-algorithm)
+      * [Event-sourcing aggregate](#event-sourcing-aggregate-1)
+  * [Install as a dependency of your project](#install-as-a-dependency-of-your-project)
+  * [Examples](#examples)
+    * [FModel in other languages](#fmodel-in-other-languages)
+  * [Resources](#resources)
+  * [Credits](#credits)
+<!-- TOC -->
+
+
 > v2.0.0 of the library is introducing breaking changes. [Check the PR](https://github.com/fraktalio/fmodel-ts/pull/692)!
 > Besides keeping the focus on separating data from behavior, we want to split the responsibilities between the domain and application/adapter layers better.
 > For example, `metadata types` exist only on the application layer, not leaking into the domain, as these don't benefit core logic. Example: `traceId`, `correlationId`, ...
