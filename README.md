@@ -15,6 +15,7 @@
     * [Materialized View](#materialized-view)
   * [Saga](#saga)
     * [Saga Manager](#saga-manager)
+  * [Event Modeling](#event-modeling)
   * [Algebraic Data Types](#algebraic-data-types)
     * [`C` / Command / Intent to change the state of the system](#c--command--intent-to-change-the-state-of-the-system)
     * [`E` / Event / Fact](#e--event--fact)
@@ -24,7 +25,7 @@
       * [Event-sourcing aggregate](#event-sourcing-aggregate-1)
   * [Install as a dependency of your project](#install-as-a-dependency-of-your-project)
   * [Examples](#examples)
-    * [FModel in other languages](#fmodel-in-other-languages)
+  * [FModel in other languages](#fmodel-in-other-languages)
   * [Resources](#resources)
   * [Credits](#credits)
 <!-- TOC -->
@@ -205,11 +206,20 @@ It is reacting on Action Results of type `AR` and produces new actions `A` based
 Saga manager is using/delegating a `Saga` to react on Action Results of type `AR` and produce new actions `A` which are
 going to be published via `ActionPublisher.publish` function.
 
+## Event Modeling
+
+[Event Modeling](https://eventmodeling.org/posts/what-is-event-modeling/) is:
+
+- a method of describing systems using an example of how information has changed within them over time.
+- a scenario-based and UX-driven approach to defining requirements.
+
+![restaurant model](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/restaurant-model.jpg)
+
 ## Algebraic Data Types
 
 > TypeScript adopts a structural type system which determines type compatibility and equivalence based on the type structure or definition rather than the declarative relationship between types and interfaces, which contrasts with nominal type system.
 
-In TypeScript, we can use ADTs to model our application's domain entities and relationships in a functional way, clearly defining the set of possible values and states.
+In TypeScript, we can use Algebraic Data Types (ADTs) to model our application's domain entities and relationships in a functional way, clearly defining the set of possible values and states.
 TypeScript has two main types of ADTs: union types (`"|"` operator), intersection types (`"&"` operator), tuples and records
 
 - `union types` is used to define a type that can take on one of several possible variants - modeling a `sum/OR` type.
@@ -239,10 +249,7 @@ export type MenuItemPrice = string;
 ```typescript
 export type Command = RestaurantCommand | OrderCommand;
 
-export type RestaurantCommand =
-  | CreateRestaurantCommand
-  | ChangeRestaurantMenuCommand
-  | PlaceOrderCommand;
+export type RestaurantCommand = CreateRestaurantCommand | ChangeRestaurantMenuCommand | PlaceOrderCommand;
 
 export type CreateRestaurantCommand = {
   readonly decider: "Restaurant";
@@ -265,6 +272,24 @@ export type PlaceOrderCommand = {
   readonly id: RestaurantId;
   readonly orderId: OrderId;
   readonly menuItems: MenuItem[];
+};
+```
+
+```typescript
+export type OrderCommand = CreateOrderCommand | MarkOrderAsPreparedCommand;
+
+export type CreateOrderCommand = {
+  decider: "Order";
+  kind: "CreateOrderCommand";
+  id: OrderId;
+  restaurantId: RestaurantId;
+  menuItems: MenuItem[];
+};
+
+export type MarkOrderAsPreparedCommand = {
+  decider: "Order";
+  kind: "MarkOrderAsPreparedCommand";
+  id: OrderId;
 };
 ```
 
@@ -342,20 +367,75 @@ export type RestaurantOrderNotPlacedEvent = {
   readonly final: boolean;
 };
 ```
+
+```typescript
+export type OrderEvent =
+  | OrderCreatedEvent
+  | OrderNotCreatedEvent
+  | OrderPreparedEvent
+  | OrderNotPreparedEvent;
+
+export type OrderCreatedEvent = {
+  version: SchemaVersion;
+  decider: "Order";
+  kind: "OrderCreatedEvent";
+  id: OrderId;
+  restaurantId: RestaurantId;
+  menuItems: MenuItem[];
+  final: boolean;
+};
+
+export type OrderNotCreatedEvent = {
+  version: SchemaVersion;
+  decider: "Order";
+  kind: "OrderNotCreatedEvent";
+  id: OrderId;
+  restaurantId: RestaurantId;
+  reason: Reason;
+  menuItems: MenuItem[];
+  final: boolean;
+};
+
+export type OrderPreparedEvent = {
+  version: SchemaVersion;
+  decider: "Order";
+  kind: "OrderPreparedEvent";
+  id: OrderId;
+  final: boolean;
+};
+
+export type OrderNotPreparedEvent = {
+  version: SchemaVersion;
+  decider: "Order";
+  kind: "OrderNotPreparedEvent";
+  id: OrderId;
+  reason: Reason;
+  final: boolean;
+};
+```
 ### `S` / State / Current state of the system/aggregate/entity
 
 ```typescript
 /**
- * Restaurant state / a data class that holds the current state of the Restaurant
+ * Restaurant state / a data type that represents the current state of the Restaurant
  */
-export class Restaurant {
-  constructor(
-    readonly id: RestaurantId,
-    readonly name: RestaurantName,
-    readonly menu: RestaurantMenu,
-  ) {
-  }
-}
+export type Restaurant = {
+  readonly restaurantId: RestaurantId;
+  readonly name: RestaurantName;
+  readonly menu: RestaurantMenu;
+};
+```
+
+```typescript
+/**
+ * Order state / a data type that represents the current state of the Order
+ */
+export type Order = {
+  readonly orderId: OrderId;
+  readonly restaurantId: RestaurantId;
+  readonly menuItems: MenuItem[];
+  readonly status: OrderStatus;
+};
 ```
 
 ## Modeling the Behaviour of our domain
@@ -370,6 +450,18 @@ Fmodel library offers generic and abstract components to specialize in for your 
 #### Decider - data type that represents the main decision-making algorithm.
 
 ```typescript
+/**
+ * Restaurant - `pure` command handler / a decision-making component
+ * ___
+ * A pure command handling algorithm, responsible for evolving the state of the restaurant.
+ * It does not produce any side effects, such as I/O, logging, etc.
+ * It utilizes type narrowing to make sure that the command is handled exhaustively.
+ * https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+ * ___
+ * @param c - command type that is being handled - `RestaurantCommand`
+ * @param s - state type that is being evolved - `Restaurant | null`
+ * @param e - event type that is being produced / a fact / an outcome of the decision - `RestaurantEvent`
+ */
 export const restaurantDecider: Decider<
   RestaurantCommand,
   Restaurant | null,
@@ -409,7 +501,7 @@ export const restaurantDecider: Decider<
               version: 1,
               decider: "Restaurant",
               kind: "RestaurantMenuChangedEvent",
-              id: currentState.id,
+              id: currentState.restaurantId,
               menu: command.menu,
               final: false,
             },
@@ -459,12 +551,16 @@ export const restaurantDecider: Decider<
   (currentState, event) => {
     switch (event.kind) {
       case "RestaurantCreatedEvent":
-        return new Restaurant(event.id, event.name, event.menu);
+        return { restaurantId: event.id, name: event.name, menu: event.menu };
       case "RestaurantNotCreatedEvent":
         return currentState;
       case "RestaurantMenuChangedEvent":
         return currentState !== null
-          ? new Restaurant(currentState.id, currentState.name, event.menu)
+          ? {
+            restaurantId: currentState.restaurantId,
+            name: currentState.name,
+            menu: event.menu,
+          }
           : currentState;
       case "RestaurantMenuNotChangedEvent":
         return currentState;
@@ -482,6 +578,107 @@ export const restaurantDecider: Decider<
 );
 ```
 
+```typescript
+/**
+ * Order  - `pure` command handler / a decision-making component
+ * ___
+ * A pure command handling algorithm, responsible for evolving the state of the order.
+ * It does not produce any side effects, such as I/O, logging, etc.
+ * It utilizes type narrowing to make sure that the command is handled exhaustively.
+ * https://www.typescriptlang.org/docs/handbook/2/narrowing.html#exhaustiveness-checking
+ * ___
+ * @param c - command type that is being handled - `OrderCommand`
+ * @param s - state type that is being evolved - `Order | null`
+ * @param e - event type that is being produced / a fact / an outcome of the decision - `Order`Event`
+ */
+export const orderDecider: Decider<OrderCommand, Order | null, OrderEvent> =
+  new Decider<OrderCommand, Order | null, OrderEvent>(
+    (command, currentState) => {
+      switch (command.kind) {
+        case "CreateOrderCommand":
+          return currentState == null
+            ? [
+              {
+                version: 1,
+                decider: "Order",
+                kind: "OrderCreatedEvent",
+                id: command.id,
+                restaurantId: command.restaurantId,
+                menuItems: command.menuItems,
+                final: false,
+              },
+            ]
+            : [
+              {
+                version: 1,
+                decider: "Order",
+                kind: "OrderNotCreatedEvent",
+                id: command.id,
+                restaurantId: command.restaurantId,
+                menuItems: command.menuItems,
+                final: false,
+                reason: "Order already exist!",
+              },
+            ];
+        case "MarkOrderAsPreparedCommand":
+          return currentState !== null
+            ? [
+              {
+                version: 1,
+                decider: "Order",
+                kind: "OrderPreparedEvent",
+                id: currentState.orderId,
+                final: false,
+              },
+            ]
+            : [
+              {
+                version: 1,
+                decider: "Order",
+                kind: "OrderNotPreparedEvent",
+                id: command.id,
+                reason: "Order does not exist!",
+                final: false,
+              },
+            ];
+        default:
+          // Exhaustive matching of the command type
+          const _: never = command;
+          return [];
+      }
+    },
+    (currentState, event) => {
+      switch (event.kind) {
+        case "OrderCreatedEvent":
+          return {
+            orderId: event.id,
+            restaurantId: event.restaurantId,
+            menuItems: event.menuItems,
+            status: "CREATED",
+          };
+        case "OrderNotCreatedEvent":
+          return currentState;
+        case "OrderPreparedEvent":
+          return currentState !== null
+            ? {
+              orderId: currentState.orderId,
+              restaurantId: currentState.restaurantId,
+              menuItems: currentState.menuItems,
+              status: "PREPARED",
+            }
+            : currentState;
+        case "OrderNotPreparedEvent":
+          return currentState;
+        default:
+          // Exhaustive matching of the event type
+          const _: never = event;
+          return currentState;
+      }
+    },
+    null,
+  );
+```
+
 The logic execution will be orchestrated by the outside components that use the domain components (decider, view) to do the computations. These components will be responsible for fetching and saving the data (repositories).
 
 
@@ -490,10 +687,21 @@ The arrows in the image (adapters->application->domain) show the direction of th
 Pushing these decisions from the core domain model is very valuable. Being able to postpone them is a sign of good architecture.
 
 #### Event-sourcing aggregate
-
+```typescript
+// We are adding new types on this layer: Metadatada and Version. Observe how these types are not leaking into the Domain layer (decider), and not influencing the core logic.
+export type StreamVersion = { event_id: string };
+export type CommandMetadata = { tenant: string };
+export type EventMetadata = {
+  tenant: string;
+  command_id: string;
+  event_id: string;
+};
+```
 ```typescript
 /**
  * An aggregate that handles the command and produces new events / A convenient type alias for the Fmodel's `EventSourcingAggregate`
+ * 
+ * This aggregate can handle all the commands of the system. Observe how two deciders (restaurant and order) are combined into one.
  */
 export type ApplicationAggregate = EventSourcingAggregate<
   Command,
@@ -532,7 +740,7 @@ npm i @fraktalio/fmodel-ts
 - Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
 - [Event sourcing and event streaming with Axon - Gift Card domain](https://github.com/AxonIQ/giftcard-demo-ts)
 
-### FModel in other languages
+## FModel in other languages
 
 - [FModel in Kotlin](https://github.com/fraktalio/fmodel)
 - [FModel in Rust](https://github.com/fraktalio/fmodel-rust)
