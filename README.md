@@ -16,11 +16,11 @@
   * [Saga](#saga)
     * [Saga Manager](#saga-manager)
   * [Event Modeling](#event-modeling)
-  * [Algebraic Data Types](#algebraic-data-types)
+  * [Structuring the data](#structuring-the-data)
     * [`C` / Command / Intent to change the state of the system](#c--command--intent-to-change-the-state-of-the-system)
     * [`E` / Event / Fact](#e--event--fact)
     * [`S` / State / Current state of the system/aggregate/entity](#s--state--current-state-of-the-systemaggregateentity)
-  * [Modeling the Behaviour of our domain](#modeling-the-behaviour-of-our-domain)
+  * [Modeling the Behaviour](#modeling-the-behaviour)
       * [Decider - data type that represents the main decision-making algorithm.](#decider---data-type-that-represents-the-main-decision-making-algorithm)
       * [Event-sourcing aggregate](#event-sourcing-aggregate-1)
   * [Install as a dependency of your project](#install-as-a-dependency-of-your-project)
@@ -215,7 +215,7 @@ going to be published via `ActionPublisher.publish` function.
 
 ![restaurant model](https://github.com/fraktalio/fmodel-ts/raw/main/.assets/restaurant-model.jpg)
 
-## Algebraic Data Types
+## Structuring the data
 
 > TypeScript adopts a structural type system which determines type compatibility and equivalence based on the type structure or definition rather than the declarative relationship between types and interfaces, which contrasts with nominal type system.
 
@@ -438,7 +438,7 @@ export type Order = {
 };
 ```
 
-## Modeling the Behaviour of our domain
+## Modeling the Behaviour
 
 - algebraic data types form the structure of our entities (commands, state, and events).
 - functions/lambda offers the algebra of manipulating the entities in a compositional manner, effectively modeling the behavior.
