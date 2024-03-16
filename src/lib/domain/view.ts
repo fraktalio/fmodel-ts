@@ -25,6 +25,12 @@
  * @param evolve - A function/lambda that takes input state of type `Si` and input event of type `Ei` as parameters, and returns the output/new state `So`
  * @param initialState - A starting point / An initial state of type `So`
  *
+ * `_View` is a pure `internal` domain component.
+ * It is not exported, and rather used to differentiate covariant and contravariant parameters, so we can map over them correctly.
+ *
+ * `_View` is used to model simpler (two parameter) public `View` component that has more practical usage.
+ * `View` has two type parameters: `S`, `E`, in where `S` = `Si` = `So`
+ *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
 class _View<Si, So, E> {
@@ -195,22 +201,22 @@ export interface IView<S, E> {
  *   (currentState, event) => {
  *     switch (event.kind) {
  *       case "OrderCreatedEvent":
- *         return new OrderView(
- *           event.id,
- *           event.restaurantId,
- *           event.menuItems,
- *           "CREATED",
- *         );
+ *         return {
+ *           orderId: event.id,
+ *           restaurantId: event.restaurantId,
+ *           menuItems: event.menuItems,
+ *           status: "CREATED",
+ *         };
  *       case "OrderNotCreatedEvent":
  *         return currentState;
  *       case "OrderPreparedEvent":
  *         return currentState !== null
- *           ? new OrderView(
- *             currentState.id,
- *             currentState.restaurantId,
- *             currentState.menuItems,
- *             "PREPARED",
- *           )
+ *           ? {
+ *             orderId: currentState.orderId,
+ *             restaurantId: currentState.restaurantId,
+ *             menuItems: currentState.menuItems,
+ *             status: "PREPARED",
+ *           }
  *           : currentState;
  *       case "OrderNotPreparedEvent":
  *         return currentState;

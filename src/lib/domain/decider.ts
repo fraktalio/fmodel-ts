@@ -19,7 +19,11 @@
  * `_Decider` can be specialized for any type `C` or `Si` or `So` or `Ei` or `Eo` because these types does not affect its behavior.
  * `_Decider` behaves the same for `C`=`Int` or `C`=`YourCustomType`, for example.
  *
- * `_Decider` is a pure domain component.
+ * `_Decider` is a pure `internal` domain component.
+ * It is not exported, and rather used to differentiate covariant and contravariant parameters, so we can map over them correctly.
+ *
+ * _Decider` is used to model simpler (three parameter) public `Decider` component that has more practical usage.
+ * `Decider` has three type parameters: `C`, `S`, `E`, in where `E` = `Ei` = `Eo` and `S` = `Si` = `So`
  *
  * @typeParam C - Command
  * @typeParam Si - Input_State type
@@ -282,7 +286,7 @@ export interface IDecider<C, S, E> {
  *                 version: 1,
  *                 decider: "Order",
  *                 kind: "OrderPreparedEvent",
- *                 id: currentState.id,
+ *                 id: currentState.orderId,
  *                 final: false,
  *               },
  *             ]
@@ -305,22 +309,22 @@ export interface IDecider<C, S, E> {
  *     (currentState, event) => {
  *       switch (event.kind) {
  *         case "OrderCreatedEvent":
- *           return new Order(
- *             event.id,
- *             event.restaurantId,
- *             event.menuItems,
- *             "CREATED",
- *           );
+ *           return {
+ *             orderId: event.id,
+ *             restaurantId: event.restaurantId,
+ *             menuItems: event.menuItems,
+ *             status: "CREATED",
+ *           };
  *         case "OrderNotCreatedEvent":
  *           return currentState;
  *         case "OrderPreparedEvent":
  *           return currentState !== null
- *             ? new Order(
- *               currentState.id,
- *               currentState.restaurantId,
- *               currentState.menuItems,
- *               "PREPARED",
- *             )
+ *             ? {
+ *               orderId: currentState.orderId,
+ *               restaurantId: currentState.restaurantId,
+ *               menuItems: currentState.menuItems,
+ *               status: "PREPARED",
+ *             }
  *             : currentState;
  *         case "OrderNotPreparedEvent":
  *           return currentState;
