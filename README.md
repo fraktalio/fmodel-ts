@@ -737,6 +737,7 @@ npm i @fraktalio/fmodel-ts
 
 - Why don't you start by browsing [tests](https://github.com/fraktalio/fmodel-ts/blob/main/src/lib/domain/decider.spec.ts)?
 - [Event sourcing and event streaming with Axon - Gift Card domain](https://github.com/AxonIQ/giftcard-demo-ts)
+- [Event sourcing on Deno runtime, with Deno KV as an event store - Restaurant Management domain](https://github.com/fraktalio/fmodel-deno-demo)
 
 ## FModel in other languages
 
