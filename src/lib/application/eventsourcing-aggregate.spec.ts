@@ -241,7 +241,7 @@ class EventRepositoryImpl
   async save(
     eList: readonly Evt[],
     commandMetadata: CmdMetadata,
-    versionProvider: (e: Evt) => Promise<Version | null>
+    versionProvider: (e: Evt & EvtMetadata) => Promise<Version | null>
   ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     //mapping the Commands metadata into Events metadata !!!
     const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
@@ -249,7 +249,12 @@ class EventRepositoryImpl
         eList.map(async (e: Evt, index) => ({
           kind: e.kind,
           value: e.value,
-          version: ((await versionProvider(e))?.version ?? 0) + index + 1,
+          version:
+            ((
+              await versionProvider({ ...e, traceId: commandMetadata.traceId })
+            )?.version ?? 0) +
+            index +
+            1,
           traceId: commandMetadata.traceId,
         }))
       );
@@ -257,7 +262,7 @@ class EventRepositoryImpl
     return savedEvents;
   }
 
-  async versionProvider(_e: Evt): Promise<Version | null> {
+  async versionProvider(_e: Evt & EvtMetadata): Promise<Version | null> {
     return storage[storage.length - 1];
   }
 }
