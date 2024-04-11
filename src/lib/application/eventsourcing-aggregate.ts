@@ -40,24 +40,24 @@ export interface IEventRepository<C, E, V, CM, EM> {
   /**
    * Get the latest event stream version / sequence
    *
-   * @param event - Event of type `E`
+   * @param event - Event of type `E & EM`
    *
    * @return the latest version / sequence of the event stream that this event belongs to.
    */
-  readonly versionProvider: (event: E) => Promise<V | null>;
+  readonly versionProvider: (event: E & EM) => Promise<V | null>;
 
   /**
    * Save events
    *
    * @param events - list of Events
    * @param commandMetadata - Command Metadata of the command that initiated `events`
-   * @param versionProvider - A provider for the Latest Event in this stream and its Version/Sequence
+   * @param versionProvider - A provider for the stream Version/Sequence
    * @return  a list of newly saved Event(s) of type `E` with Version of type `V` and with Event Metadata of type `EM`
    */
   readonly save: (
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E & EM) => Promise<V | null>
   ) => Promise<readonly (E & V & EM)[]>;
 }
 
@@ -228,14 +228,14 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.fetch(command);
   }
 
-  async versionProvider(event: E): Promise<V | null> {
+  async versionProvider(event: E & EM): Promise<V | null> {
     return this.eventRepository.versionProvider(event);
   }
 
   async save(
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E & EM) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
@@ -284,14 +284,14 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.fetch(command);
   }
 
-  async versionProvider(event: E): Promise<V | null> {
+  async versionProvider(event: E & EM): Promise<V | null> {
     return this.eventRepository.versionProvider(event);
   }
 
   async save(
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E & EM) => Promise<V | null>
   ): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
