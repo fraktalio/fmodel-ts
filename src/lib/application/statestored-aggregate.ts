@@ -31,10 +31,10 @@ export interface IStateRepository<C, S, V, CM, SM> {
   /**
    * Fetch state, version and metadata
    *
-   * @param command - Command payload of type C with metadata of type `CM`
+   * @param command - Command payload of type C
    * @return current State/[S], Version/[V] and State Metadata/[SM]
    */
-  readonly fetch: (command: C & CM) => Promise<(S & V & SM) | null>;
+  readonly fetch: (command: C) => Promise<(S & V & SM) | null>;
 
   /**
    * Save state (with optimistic locking)
@@ -176,7 +176,7 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
   ) {
     super(decider);
   }
-  async fetch(command: C & CM): Promise<(S & V & SM) | null> {
+  async fetch(command: C): Promise<(S & V & SM) | null> {
     return this.stateRepository.fetch(command);
   }
 
@@ -230,7 +230,7 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
     super(decider, saga);
   }
 
-  async fetch(command: C & CM): Promise<(S & V & SM) | null> {
+  async fetch(command: C): Promise<(S & V & SM) | null> {
     return this.stateRepository.fetch(command);
   }
 
