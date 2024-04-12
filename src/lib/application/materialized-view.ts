@@ -29,11 +29,11 @@ export interface IViewStateRepository<E, S, V, EM> {
   /**
    * Fetch state
    *
-   * @param event - Event of type `E` with metadata of type `EM`
+   * @param event - Event of type `E`
    *
    * @return current state / `S` with version / `V`, or NULL
    */
-  readonly fetch: (event: E & EM) => Promise<(S & V) | null>;
+  readonly fetch: (event: E) => Promise<(S & V) | null>;
   /**
    * Save state
    *
@@ -98,7 +98,7 @@ export class MaterializedView<S, E, V, EM>
     return this.view.evolve(state, event);
   }
 
-  async fetch(event: E & EM): Promise<(S & V) | null> {
+  async fetch(event: E): Promise<(S & V) | null> {
     return this.viewStateRepository.fetch(event);
   }
 
