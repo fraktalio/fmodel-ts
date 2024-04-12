@@ -234,35 +234,35 @@ type Evt = EvenNumberEvt | OddNumberEvt;
 class EventRepositoryImpl
   implements IEventRepository<Cmd, Evt, Version, CmdMetadata, EvtMetadata>
 {
-  async fetch(_c: Cmd): Promise<readonly (Evt & Version & EvtMetadata)[]> {
+  async fetch(
+    _c: Cmd & CmdMetadata
+  ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
+    console.log(
+      '######################### CmdMetadata.traceId = ' + _c.traceId
+    );
     return storage;
   }
 
   async save(
-    eList: readonly Evt[],
-    commandMetadata: CmdMetadata,
-    versionProvider: (e: Evt & EvtMetadata) => Promise<Version | null>
+    eList: readonly [Evt, CmdMetadata][],
+    versionProvider: (e: Evt, cm: CmdMetadata) => Promise<Version | null>
   ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     //mapping the Commands metadata into Events metadata !!!
     const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
       await Promise.all(
-        eList.map(async (e: Evt, index) => ({
-          kind: e.kind,
-          value: e.value,
+        eList.map(async (e, index) => ({
+          kind: e[0].kind,
+          value: e[0].value,
           version:
-            ((
-              await versionProvider({ ...e, traceId: commandMetadata.traceId })
-            )?.version ?? 0) +
-            index +
-            1,
-          traceId: commandMetadata.traceId,
+            ((await versionProvider(e[0], e[1]))?.version ?? 0) + index + 1,
+          traceId: e[1].traceId,
         }))
       );
     storage.concat(savedEvents);
     return savedEvents;
   }
 
-  async versionProvider(_e: Evt & EvtMetadata): Promise<Version | null> {
+  async versionProvider(_e: Evt, _cm: CmdMetadata): Promise<Version | null> {
     return storage[storage.length - 1];
   }
 }
