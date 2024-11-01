@@ -40,9 +40,9 @@ combine<C2, S2, E2>(decider2: Decider<C2, S2, E2>): Decider<C | C2, S & S2, E | 
 Example:
 
 ```ts
-export const restaurantDecider: Decider<RestaurantCommand, Restaurant | null, RestaurantEvent>
+const restaurantDecider: Decider<RestaurantCommand, Restaurant | null, RestaurantEvent>
 
-export const orderDecider: Decider<OrderCommand, Order | null, OrderEvent>
+const orderDecider: Decider<OrderCommand, Order | null, OrderEvent>
 
 // Combining two deciders into one big decider that can handle all commands of the system.
 const decider: Decider<RestaurantCommand | OrderCommand, (Order & Restaurant) | null, RestaurantEvent | OrderEvent> =
@@ -84,9 +84,9 @@ combine<S2, E2>(view2: View<S2, E2>): View<S & S2, E | E2>
 Example:
 
 ```ts
-export const restaurantView: View<RestaurantView | null, RestaurantEvent>
+const restaurantView: View<RestaurantView | null, RestaurantEvent>
 
-export const orderView: View<OrderView | null, OrderEvent> 
+const orderView: View<OrderView | null, OrderEvent> 
 
 // Combining two views into one big view that can handle all events of the system.
 const view: View<(RestaurantView & OrderView) | null, OrderEvent | RestaurantEvent> = restaurantView.combine(orderView);
@@ -125,8 +125,8 @@ combine<AR2, A2>(saga2: Saga<AR2, A2>): Saga<AR | AR2, A | A2>
 Example:
 
 ```ts
-export const restaurantSaga: Saga<OrderEvent, RestaurantCommand>
-export const orderSaga: Saga<RestaurantEvent, OrderCommand>
+const restaurantSaga: Saga<OrderEvent, RestaurantCommand>
+const orderSaga: Saga<RestaurantEvent, OrderCommand>
 
 // Combining two choreography sagas into one big system orchestrating saga.
 const saga: Saga<RestaurantEvent | OrderEvent, RestaurantCommand | OrderCommand> = restaurantSaga.combine(orderSaga);
