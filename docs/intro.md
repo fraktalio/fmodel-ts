@@ -95,5 +95,5 @@ You have great frameworks at your service to bootstrap development:
 
 
 :::info
-Fmodel does not require usage of any framework whatsoever. It is completely up to you!
+Fmodel does not require usage of any framework whatsoever. It is completely up to you.
 :::
