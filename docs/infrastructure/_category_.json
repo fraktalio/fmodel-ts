@@ -1,0 +1,8 @@
+{
+  "label": "Choose the right infrastructure",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "description": "Choose the right infrastructure for the selected use case: state-stored or event-sourced. What model is best for your use case, relational, document, graph or key-value? What about the data access patterns?"
+  }
+}
