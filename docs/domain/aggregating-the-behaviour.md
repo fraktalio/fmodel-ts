@@ -45,7 +45,7 @@ export const restaurantDecider: Decider<RestaurantCommand, Restaurant | null, Re
 export const orderDecider: Decider<OrderCommand, Order | null, OrderEvent>
 
 // Combining two deciders into one big decider that can handle all commands of the system.
-const decider: Decider<Command, (Order & Restaurant) | null, Event> =
+const decider: Decider<RestaurantCommand | OrderCommand, (Order & Restaurant) | null, RestaurantEvent | OrderEvent> =
       restaurantDecider.combine(orderDecider);
 ```
 
@@ -129,7 +129,7 @@ export const restaurantSaga: Saga<OrderEvent, RestaurantCommand>
 export const orderSaga: Saga<RestaurantEvent, OrderCommand>
 
 // Combining two choreography sagas into one big system orchestrating saga.
-const saga: Saga<Event, Command> = restaurantSaga.combine(orderSaga);
+const saga: Saga<RestaurantEvent | OrderEvent, RestaurantCommand | OrderCommand> = restaurantSaga.combine(orderSaga);
 ```
 
 If the constraints are not met, the `combine` function will not be available for usage!
@@ -139,10 +139,10 @@ ____________
 
 Additionally, `Saga<AR, A>` provides map functions:
 
-```kotlin
-inline fun <ARn> mapLeftOnActionResult(crossinline f: (ARn) -> AR): Saga<ARn, A>
+```ts
+mapContraOnActionResult<ARn>(f: (arn: ARn) => AR): Saga<ARn, A>
 
-inline fun <An> mapOnAction(crossinline f: (A) -> An): Saga<AR, An>
+mapOnAction<An>(f: (a: A) => An): Saga<AR, An> 
 ```
 
   </TabItem>
