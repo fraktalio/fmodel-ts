@@ -58,13 +58,17 @@ const config: Config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+        gtag: {
+          trackingID: 'G-QGWDF1Z9RM',
+          anonymizeIP: true,
+        },
       } satisfies Preset.Options,
     ],
   ],
 
   themeConfig: {
     image: 'img/fmodel-social2.png',
-    metadata: [{name: 'keywords', content: 'domain-modeling, event-sourcing, event-modeling, typescript'}],
+    metadata: [{ name: 'keywords', content: 'domain-modeling, event-sourcing, event-modeling, typescript' }],
     navbar: {
       title: 'Fmodel',
       logo: {
