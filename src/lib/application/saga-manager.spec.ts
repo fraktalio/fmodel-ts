@@ -118,7 +118,7 @@ class ActionPublisherImpl
   implements IActionPublisher<Action, ActionResult, Action>
 {
   async publish(
-    actions: readonly (Action & ActionResult)[]
+    actions: readonly (Action & ActionResult)[],
   ): Promise<readonly Action[]> {
     return actions.map((a) => ({
       kindOfCommand: a.kindOfCommand,
@@ -132,7 +132,7 @@ const actionPublisher: IActionPublisher<Action, ActionResult, Action> =
 const sagaManager: ISagaManager<ActionResult, Action, ActionResult, Action> =
   new SagaManager<ActionResult, Action, ActionResult, Action>(
     evenSaga.combine(oddSaga),
-    actionPublisher
+    actionPublisher,
   );
 
 test('saga-handle', async (t) => {
@@ -143,6 +143,6 @@ test('saga-handle', async (t) => {
         kindOfCommand: 'MultiplyEvenNumberCmd',
         valueOfCommand: 2,
       },
-    ]
+    ],
   );
 });

@@ -67,7 +67,7 @@ export class Saga<AR, A> implements ISaga<AR, A> {
    */
   combine<AR2, A2>(saga2: Saga<AR2, A2>): Saga<AR | AR2, A | A2> {
     const sagaX = this.mapContraOnActionResult<AR | AR2>(
-      (en) => en as AR
+      (en) => en as AR,
     ).mapOnAction<A | A2>(identity);
 
     const sagaY = saga2
@@ -75,7 +75,7 @@ export class Saga<AR, A> implements ISaga<AR, A> {
       .mapOnAction<A | A2>(identity);
 
     return new Saga<AR | AR2, A | A2>((ar: AR | AR2) =>
-      sagaX.react(ar).concat(sagaY.react(ar))
+      sagaX.react(ar).concat(sagaY.react(ar)),
     );
   }
 }

@@ -37,7 +37,7 @@ class _Decider<C, Si, So, Ei, Eo> {
   constructor(
     readonly decide: (c: C, s: Si) => readonly Eo[],
     readonly evolve: (s: Si, e: Ei) => So,
-    readonly initialState: So
+    readonly initialState: So,
   ) {}
 
   /**
@@ -49,7 +49,7 @@ class _Decider<C, Si, So, Ei, Eo> {
     return new _Decider(
       (cn: Cn, s: Si) => this.decide(f(cn), s),
       (s: Si, e: Ei) => this.evolve(s, e),
-      this.initialState
+      this.initialState,
     );
   }
 
@@ -61,12 +61,12 @@ class _Decider<C, Si, So, Ei, Eo> {
    */
   dimapOnEvent<Ein, Eon>(
     fl: (ein: Ein) => Ei,
-    fr: (eo: Eo) => Eon
+    fr: (eo: Eo) => Eon,
   ): _Decider<C, Si, So, Ein, Eon> {
     return new _Decider(
       (c: C, s: Si) => this.decide(c, s).map(fr),
       (s: Si, ein: Ein) => this.evolve(s, fl(ein)),
-      this.initialState
+      this.initialState,
     );
   }
 
@@ -78,12 +78,12 @@ class _Decider<C, Si, So, Ei, Eo> {
    */
   dimapOnState<Sin, Son>(
     fl: (sin: Sin) => Si,
-    fr: (so: So) => Son
+    fr: (so: So) => Son,
   ): _Decider<C, Sin, Son, Ei, Eo> {
     return new _Decider(
       (c: C, sin: Sin) => this.decide(c, fl(sin)),
       (sin: Sin, e: Ei) => fr(this.evolve(fl(sin), e)),
-      fr(this.initialState)
+      fr(this.initialState),
     );
   }
 
@@ -111,12 +111,12 @@ class _Decider<C, Si, So, Ei, Eo> {
    * @typeParam Son - New output State
    */
   applyOnState<Son>(
-    ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>
+    ff: _Decider<C, Si, (so: So) => Son, Ei, Eo>,
   ): _Decider<C, Si, Son, Ei, Eo> {
     return new _Decider(
       (c: C, s: Si) => ff.decide(c, s).concat(this.decide(c, s)),
       (s: Si, e: Ei) => ff.evolve(s, e)(this.evolve(s, e)),
-      ff.initialState(this.initialState)
+      ff.initialState(this.initialState),
     );
   }
 
@@ -127,12 +127,12 @@ class _Decider<C, Si, So, Ei, Eo> {
    * @typeParam Son - New output State
    */
   productOnState<Son>(
-    fb: _Decider<C, Si, Son, Ei, Eo>
+    fb: _Decider<C, Si, Son, Ei, Eo>,
   ): _Decider<C, Si, So & Son, Ei, Eo> {
     return this.applyOnState(
       fb.mapOnState((son: Son) => (so: So) => {
         return Object.assign({}, so, son);
-      })
+      }),
     );
   }
 
@@ -143,7 +143,7 @@ class _Decider<C, Si, So, Ei, Eo> {
    * @typeParam Son - New output State
    */
   productViaTuplesOnState<Son>(
-    fb: _Decider<C, Si, Son, Ei, Eo>
+    fb: _Decider<C, Si, Son, Ei, Eo>,
   ): _Decider<C, Si, readonly [So, Son], Ei, Eo> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
   }
@@ -154,13 +154,13 @@ class _Decider<C, Si, So, Ei, Eo> {
    * The States/S are combined via `intersection`
    */
   combine<C2, Si2, So2, Ei2, Eo2>(
-    y: _Decider<C2, Si2, So2, Ei2, Eo2>
+    y: _Decider<C2, Si2, So2, Ei2, Eo2>,
   ): _Decider<C | C2, Si & Si2, So & So2, Ei | Ei2, Eo | Eo2> {
     const deciderX = this.mapContraOnCommand<C | C2>((c) => c as C)
       .mapContraOnState<Si & Si2>((sin) => sin as Si)
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei,
-        (eo) => eo
+        (eo) => eo,
       );
 
     const deciderY = y
@@ -168,7 +168,7 @@ class _Decider<C, Si, So, Ei, Eo> {
       .mapContraOnState<Si & Si2>((sin) => sin as Si2)
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei2,
-        (eo2) => eo2
+        (eo2) => eo2,
       );
 
     return deciderX.productOnState(deciderY);
@@ -180,7 +180,7 @@ class _Decider<C, Si, So, Ei, Eo> {
    * The States/S are combined via `tuples`
    */
   combineViaTuples<C2, Si2, So2, Ei2, Eo2>(
-    y: _Decider<C2, Si2, So2, Ei2, Eo2>
+    y: _Decider<C2, Si2, So2, Ei2, Eo2>,
   ): _Decider<
     C | C2,
     readonly [Si, Si2],
@@ -192,7 +192,7 @@ class _Decider<C, Si, So, Ei, Eo> {
       .mapContraOnState<readonly [Si, Si2]>((sin) => sin[0])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei,
-        (eo) => eo
+        (eo) => eo,
       );
 
     const deciderY = y
@@ -200,7 +200,7 @@ class _Decider<C, Si, So, Ei, Eo> {
       .mapContraOnState<readonly [Si, Si2]>((sin) => sin[1])
       .dimapOnEvent<Ei | Ei2, Eo | Eo2>(
         (ein) => ein as Ei2,
-        (eo2) => eo2
+        (eo2) => eo2,
       );
 
     return deciderX.productViaTuplesOnState(deciderY);
@@ -342,7 +342,7 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
   constructor(
     readonly decide: (command: C, state: S) => readonly E[],
     readonly evolve: (state: S, event: E) => S,
-    readonly initialState: S
+    readonly initialState: S,
   ) {}
 
   /**
@@ -355,8 +355,8 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
       new _Decider(
         this.decide,
         this.evolve,
-        this.initialState
-      ).mapContraOnCommand(f)
+        this.initialState,
+      ).mapContraOnCommand(f),
     );
   }
 
@@ -369,8 +369,8 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
     return asDecider(
       new _Decider(this.decide, this.evolve, this.initialState).dimapOnEvent(
         fl,
-        fr
-      )
+        fr,
+      ),
     );
   }
 
@@ -383,8 +383,8 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
     return asDecider(
       new _Decider(this.decide, this.evolve, this.initialState).dimapOnState(
         fl,
-        fr
-      )
+        fr,
+      ),
     );
   }
 
@@ -404,12 +404,12 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
    * Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combine<C2, S2, E2>(
-    decider2: Decider<C2, S2, E2>
+    decider2: Decider<C2, S2, E2>,
   ): Decider<C | C2, S & S2, E | E2> {
     return asDecider(
       new _Decider(this.decide, this.evolve, this.initialState).combine(
-        new _Decider(decider2.decide, decider2.evolve, decider2.initialState)
-      )
+        new _Decider(decider2.decide, decider2.evolve, decider2.initialState),
+      ),
     );
   }
 
@@ -428,16 +428,16 @@ export class Decider<C, S, E> implements IDecider<C, S, E> {
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combineViaTuples<C2, S2, E2>(
-    decider2: Decider<C2, S2, E2>
+    decider2: Decider<C2, S2, E2>,
   ): Decider<C | C2, readonly [S, S2], E | E2> {
     return asDecider(
       new _Decider(
         this.decide,
         this.evolve,
-        this.initialState
+        this.initialState,
       ).combineViaTuples(
-        new _Decider(decider2.decide, decider2.evolve, decider2.initialState)
-      )
+        new _Decider(decider2.decide, decider2.evolve, decider2.initialState),
+      ),
     );
   }
 }
@@ -453,7 +453,7 @@ const identity = <T>(t: T) => t;
  * @param decider
  */
 function asDecider<C, S, E>(
-  decider: _Decider<C, S, S, E, E>
+  decider: _Decider<C, S, S, E, E>,
 ): Decider<C, S, E> {
   return new Decider(decider.decide, decider.evolve, decider.initialState);
 }

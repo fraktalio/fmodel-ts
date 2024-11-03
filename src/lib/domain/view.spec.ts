@@ -76,7 +76,7 @@ const evenView: View<EvenViewState, EvenNumberEvt> = new View<
         return { evenState: s.evenState };
     }
   },
-  { evenState: 0 }
+  { evenState: 0 },
 );
 
 // A dedicated View for the Odd numbers only
@@ -98,13 +98,13 @@ const oddView: View<OddViewState, OddNumberEvt> = new View<
         return { oddState: s.oddState };
     }
   },
-  { oddState: 0 }
+  { oddState: 0 },
 );
 
 test('odd-view-evolve', (t) => {
   t.deepEqual(
     oddView.evolve({ oddState: 1 }, { kind: 'OddNumberAddedEvt', value: 1 }),
-    { oddState: 2 }
+    { oddState: 2 },
   );
 });
 
@@ -112,16 +112,16 @@ test('odd-view-evolve2', (t) => {
   t.deepEqual(
     oddView.evolve(
       { oddState: 2 },
-      { kind: 'OddNumberMultipliedEvt', value: 5 }
+      { kind: 'OddNumberMultipliedEvt', value: 5 },
     ),
-    { oddState: 10 }
+    { oddState: 10 },
   );
 });
 
 test('even-view-evolve', (t) => {
   t.deepEqual(
     evenView.evolve({ evenState: 1 }, { kind: 'EvenNumberAddedEvt', value: 2 }),
-    { evenState: 3 }
+    { evenState: 3 },
   );
 });
 
@@ -129,9 +129,9 @@ test('even-view-evolve2', (t) => {
   t.deepEqual(
     evenView.evolve(
       { evenState: 2 },
-      { kind: 'EvenNumberMultipliedEvt', value: 6 }
+      { kind: 'EvenNumberMultipliedEvt', value: 6 },
     ),
-    { evenState: 12 }
+    { evenState: 12 },
   );
 });
 
@@ -141,9 +141,9 @@ test('combined-view-evolve', (t) => {
       .combine(evenView)
       .evolve(
         { oddState: 0, evenState: 0 },
-        { kind: 'OddNumberAddedEvt', value: 1 }
+        { kind: 'OddNumberAddedEvt', value: 1 },
       ),
-    { oddState: 1, evenState: 0 }
+    { oddState: 1, evenState: 0 },
   );
 });
 
@@ -155,6 +155,6 @@ test('combined-via-tuples-view-evolve', (t) => {
         kind: 'OddNumberAddedEvt',
         value: 1,
       }),
-    [{ oddState: 1 }, { evenState: 0 }]
+    [{ oddState: 1 }, { evenState: 0 }],
   );
 });

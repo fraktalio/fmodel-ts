@@ -45,7 +45,7 @@ export interface IViewStateRepository<E, S, V, EM> {
   readonly save: (
     state: S,
     eventMetadata: EM,
-    version: V | null
+    version: V | null,
   ) => Promise<S & V>;
 }
 
@@ -88,7 +88,7 @@ export class MaterializedView<S, E, V, EM>
 {
   constructor(
     protected readonly view: IView<S, E>,
-    protected readonly viewStateRepository: IViewStateRepository<E, S, V, EM>
+    protected readonly viewStateRepository: IViewStateRepository<E, S, V, EM>,
   ) {
     this.initialState = this.view.initialState;
   }
@@ -110,12 +110,12 @@ export class MaterializedView<S, E, V, EM>
     const currentStateAndVersion = await this.viewStateRepository.fetch(event);
     const newState = this.view.evolve(
       currentStateAndVersion ? currentStateAndVersion : this.view.initialState,
-      event
+      event,
     );
     return this.viewStateRepository.save(
       newState,
       event as EM,
-      currentStateAndVersion as V
+      currentStateAndVersion as V,
     );
   }
 }

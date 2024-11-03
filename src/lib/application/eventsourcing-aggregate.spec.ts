@@ -132,7 +132,7 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
         return { oddNumber: s.oddNumber };
     }
   },
-  { oddNumber: 0 }
+  { oddNumber: 0 },
 );
 
 // A decider / decision-making component for Even numbers only
@@ -166,7 +166,7 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
           return { evenNumber: s.evenNumber };
       }
     },
-    { evenNumber: 0 }
+    { evenNumber: 0 },
   );
 
 // ################################
@@ -241,7 +241,7 @@ class EventRepositoryImpl
   async save(
     eList: readonly Evt[],
     commandMetadata: CmdMetadata,
-    versionProvider: (e: Evt) => Promise<Version | null>
+    versionProvider: (e: Evt) => Promise<Version | null>,
   ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     //mapping the Commands metadata into Events metadata !!!
     const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
@@ -251,7 +251,7 @@ class EventRepositoryImpl
           value: e.value,
           version: ((await versionProvider(e))?.version ?? 0) + index + 1,
           traceId: commandMetadata.traceId,
-        }))
+        })),
       );
     storage.concat(savedEvents);
     return savedEvents;
@@ -349,7 +349,7 @@ const aggregateViaTupleOrchestrating: IEventSourcingOrchestratingAggregate<
 >(
   evenDecider.combineViaTuples(oddDecider),
   repository,
-  oddSaga.combine(evenSaga)
+  oddSaga.combine(evenSaga),
 );
 
 // ################################
@@ -363,7 +363,7 @@ test('aggregate-handle', async (t) => {
       valueOfCommand: 1,
       traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }]
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }],
   );
 });
 
@@ -374,7 +374,7 @@ test('aggregate-handle2', async (t) => {
       valueOfCommand: 2,
       traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }]
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }],
   );
 });
 
@@ -385,7 +385,7 @@ test('aggregate-via-tuples-handle', async (t) => {
       valueOfCommand: 1,
       traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }]
+    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }],
   );
 });
 
@@ -396,7 +396,7 @@ test('aggregate-via-tuples-handle2', async (t) => {
       valueOfCommand: 2,
       traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }]
+    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }],
   );
 });
 
@@ -410,7 +410,7 @@ test('aggregate-orchestrating-handle', async (t) => {
     [
       { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
       { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
-    ]
+    ],
   );
 });
 
@@ -424,6 +424,6 @@ test('aggregate-via-tuples-orchestrating-handle', async (t) => {
     [
       { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
       { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
-    ]
+    ],
   );
 });

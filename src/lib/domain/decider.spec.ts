@@ -118,7 +118,7 @@ const evenDecider: Decider<EvenNumberCmd, EvenState | null, EvenNumberEvt> =
         }
       }
     },
-    { evenNumber: 0 }
+    { evenNumber: 0 },
   );
 
 // Odd number decider - It works with odd numbers only
@@ -152,16 +152,16 @@ const oddDecider: Decider<OddNumberCmd, OddState | null, OddNumberEvt> =
         }
       }
     },
-    { oddNumber: 0 }
+    { oddNumber: 0 },
   );
 
 test('odd-decider-evolve', (t) => {
   t.deepEqual(
     oddDecider.evolve(
       { oddNumber: 1 },
-      { kind: 'OddNumberAddedEvt', value: 1 }
+      { kind: 'OddNumberAddedEvt', value: 1 },
     ),
-    { oddNumber: 2 }
+    { oddNumber: 2 },
   );
 });
 
@@ -169,9 +169,9 @@ test('even-decider-evolve', (t) => {
   t.deepEqual(
     evenDecider.evolve(
       { evenNumber: 1 },
-      { kind: 'EvenNumberAddedEvt', value: 2 }
+      { kind: 'EvenNumberAddedEvt', value: 2 },
     ),
-    { evenNumber: 3 }
+    { evenNumber: 3 },
   );
 });
 
@@ -183,7 +183,7 @@ test('combined-via-tuples-decider-evolve', (t) => {
         kind: 'EvenNumberAddedEvt',
         value: 2,
       }),
-    [{ oddNumber: 0 }, { evenNumber: 2 }]
+    [{ oddNumber: 0 }, { evenNumber: 2 }],
   );
 });
 
@@ -194,9 +194,9 @@ test('combined-decider-evolve', (t) => {
       {
         kind: 'OddNumberAddedEvt',
         value: 3,
-      }
+      },
     ),
-    { oddNumber: 3, evenNumber: 0 }
+    { oddNumber: 3, evenNumber: 0 },
   );
 });
 
@@ -204,23 +204,23 @@ test('odd-decider-decide', (t) => {
   t.deepEqual(
     oddDecider.decide(
       { kindOfCommand: 'AddOddNumberCmd', valueOfCommand: 1 },
-      { oddNumber: 1 }
+      { oddNumber: 1 },
     ),
-    [{ kind: 'OddNumberAddedEvt', value: 1 }]
+    [{ kind: 'OddNumberAddedEvt', value: 1 }],
   );
 });
 
 test('odd-decider-decide-with-map', (t) => {
   t.deepEqual(
     oddDecider
-      .mapContraOnCommand<OddNumberCmd | EvenNumberCmd>(
-        (cn) => cn as OddNumberCmd
-      )
+      .mapContraOnCommand<
+        OddNumberCmd | EvenNumberCmd
+      >((cn) => cn as OddNumberCmd)
       .decide(
         { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 2 },
-        { oddNumber: 2 }
+        { oddNumber: 2 },
       ),
-    []
+    [],
   );
 });
 
@@ -232,7 +232,7 @@ test('combined-via-tuples-decider-decide', (t) => {
         { oddNumber: 0 },
         { evenNumber: 0 },
       ]),
-    [{ kind: 'OddNumberAddedEvt', value: 1 }]
+    [{ kind: 'OddNumberAddedEvt', value: 1 }],
   );
 });
 
@@ -242,8 +242,8 @@ test('combined-decider-decide', (t) => {
       .combine(evenDecider)
       .decide(
         { kindOfCommand: 'AddEvenNumberCmd', valueOfCommand: 2 },
-        { evenNumber: 0, oddNumber: 0 }
+        { evenNumber: 0, oddNumber: 0 },
       ),
-    [{ kind: 'EvenNumberAddedEvt', value: 2 }]
+    [{ kind: 'EvenNumberAddedEvt', value: 2 }],
   );
 });

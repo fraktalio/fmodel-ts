@@ -36,7 +36,7 @@
 class _View<Si, So, E> {
   constructor(
     readonly evolve: (s: Si, e: E) => So,
-    readonly initialState: So
+    readonly initialState: So,
   ) {}
 
   /**
@@ -47,7 +47,7 @@ class _View<Si, So, E> {
   mapContraOnEvent<En>(f: (en: En) => E): _View<Si, So, En> {
     return new _View(
       (s: Si, en: En) => this.evolve(s, f(en)),
-      this.initialState
+      this.initialState,
     );
   }
 
@@ -59,11 +59,11 @@ class _View<Si, So, E> {
    */
   dimapOnState<Sin, Son>(
     fl: (sin: Sin) => Si,
-    fr: (so: So) => Son
+    fr: (so: So) => Son,
   ): _View<Sin, Son, E> {
     return new _View(
       (s: Sin, e: E) => fr(this.evolve(fl(s), e)),
-      fr(this.initialState)
+      fr(this.initialState),
     );
   }
 
@@ -93,7 +93,7 @@ class _View<Si, So, E> {
   applyOnState<Son>(ff: _View<Si, (so: So) => Son, E>): _View<Si, Son, E> {
     return new _View(
       (s: Si, e: E) => ff.evolve(s, e)(this.evolve(s, e)),
-      ff.initialState(this.initialState)
+      ff.initialState(this.initialState),
     );
   }
 
@@ -106,7 +106,7 @@ class _View<Si, So, E> {
    */
   productOnState<Son>(fb: _View<Si, Son, E>): _View<Si, So & Son, E> {
     return this.applyOnState(
-      fb.mapOnState((b: Son) => (a: So) => ({ ...(a as So), ...(b as Son) }))
+      fb.mapOnState((b: Son) => (a: So) => ({ ...(a as So), ...(b as Son) })),
     );
   }
 
@@ -118,7 +118,7 @@ class _View<Si, So, E> {
    * @typeParam Son - New output State
    */
   productViaTuplesOnState<Son>(
-    fb: _View<Si, Son, E>
+    fb: _View<Si, Son, E>,
   ): _View<Si, readonly [So, Son], E> {
     return this.applyOnState(fb.mapOnState((b: Son) => (a: So) => [a, b]));
   }
@@ -130,10 +130,10 @@ class _View<Si, So, E> {
    *
    */
   combine<Si2, So2, E2>(
-    y: _View<Si2, So2, E2>
+    y: _View<Si2, So2, E2>,
   ): _View<Si & Si2, So & So2, E | E2> {
     const viewX = this.mapContraOnEvent<E | E2>(
-      (en) => en as unknown as E
+      (en) => en as unknown as E,
     ).mapContraOnState<Si & Si2>((sin) => sin);
 
     const viewY = y
@@ -150,10 +150,10 @@ class _View<Si, So, E> {
    *
    */
   combineViaTuples<Si2, So2, E2>(
-    y: _View<Si2, So2, E2>
+    y: _View<Si2, So2, E2>,
   ): _View<readonly [Si, Si2], readonly [So, So2], E | E2> {
     const viewX = this.mapContraOnEvent<E | E2>(
-      (en) => en as unknown as E
+      (en) => en as unknown as E,
     ).mapContraOnState<readonly [Si, Si2]>((sin) => sin[0]);
 
     const viewY = y
@@ -235,7 +235,7 @@ export interface IView<S, E> {
 export class View<S, E> implements IView<S, E> {
   constructor(
     readonly evolve: (state: S, event: E) => S,
-    readonly initialState: S
+    readonly initialState: S,
   ) {}
 
   /**
@@ -245,7 +245,7 @@ export class View<S, E> implements IView<S, E> {
    */
   mapContraOnEvent<En>(f: (en: En) => E): View<S, En> {
     return asView(
-      new _View(this.evolve, this.initialState).mapContraOnEvent(f)
+      new _View(this.evolve, this.initialState).mapContraOnEvent(f),
     );
   }
 
@@ -256,7 +256,7 @@ export class View<S, E> implements IView<S, E> {
    */
   dimapOnState<Sn>(fl: (sn: Sn) => S, fr: (s: S) => Sn): View<Sn, E> {
     return asView(
-      new _View(this.evolve, this.initialState).dimapOnState(fl, fr)
+      new _View(this.evolve, this.initialState).dimapOnState(fl, fr),
     );
   }
 
@@ -274,8 +274,8 @@ export class View<S, E> implements IView<S, E> {
   combine<S2, E2>(view2: View<S2, E2>): View<S & S2, E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combine(
-        new _View(view2.evolve, view2.initialState)
-      )
+        new _View(view2.evolve, view2.initialState),
+      ),
     );
   }
 
@@ -291,12 +291,12 @@ export class View<S, E> implements IView<S, E> {
    * 3. Compatibility: Consider the compatibility of your chosen approach with other libraries, frameworks, or tools you're using in your TypeScript project. Some libraries or tools might work better with one approach over the other.
    */
   combineViaTuples<S2, E2>(
-    view2: View<S2, E2>
+    view2: View<S2, E2>,
   ): View<readonly [S, S2], E | E2> {
     return asView(
       new _View(this.evolve, this.initialState).combineViaTuples(
-        new _View(view2.evolve, view2.initialState)
-      )
+        new _View(view2.evolve, view2.initialState),
+      ),
     );
   }
 }
