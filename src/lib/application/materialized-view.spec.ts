@@ -87,7 +87,7 @@ const evenView: View<EvenViewState, EvenNumberEvt> = new View<
         return { evenState: s.evenState };
     }
   },
-  { evenState: 0 }
+  { evenState: 0 },
 );
 
 // View for the Odd numbers
@@ -109,7 +109,7 @@ const oddView: View<OddViewState, OddNumberEvt> = new View<
         return { oddState: s.oddState };
     }
   },
-  { oddState: 0 }
+  { oddState: 0 },
 );
 
 // ############################################
@@ -135,7 +135,7 @@ class ViewStateRepositoryImpl
   async save(
     s: ViewState,
     _: EventMetadata,
-    v: Version | null
+    v: Version | null,
   ): Promise<ViewState & Version> {
     storage = {
       evenState: s.evenState,
@@ -162,7 +162,7 @@ const materializedView: IMaterializedView<
   EventMetadata
 > = new MaterializedView<ViewState, Event, Version, EventMetadata>(
   evenView.combine(oddView),
-  repository
+  repository,
 );
 
 test('view-handle', async (t) => {
@@ -172,6 +172,6 @@ test('view-handle', async (t) => {
       value: 2,
       traceId: 'trc1',
     }),
-    { evenState: 2, oddState: 0, version: 1 }
+    { evenState: 2, oddState: 0, version: 1 },
   );
 });

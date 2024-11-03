@@ -34,7 +34,7 @@ export interface IActionPublisher<A, ARM, AM> {
    * @return list of newly published Actions with Action Metadata of type `A & AM`
    */
   readonly publish: (
-    actions: readonly (A & ARM)[]
+    actions: readonly (A & ARM)[],
   ) => Promise<readonly (A & AM)[]>;
 }
 
@@ -78,7 +78,7 @@ export class SagaManager<AR, A, ARM, AM>
    */
   constructor(
     protected readonly saga: ISaga<AR, A>,
-    protected readonly actionPublisher: IActionPublisher<A, ARM, AM>
+    protected readonly actionPublisher: IActionPublisher<A, ARM, AM>,
   ) {}
 
   react(actionResult: AR): readonly A[] {
@@ -98,7 +98,7 @@ export class SagaManager<AR, A, ARM, AM>
   async handle(actionResult: AR & ARM): Promise<readonly (A & AM)[]> {
     const actions = this.saga.react(actionResult);
     return this.actionPublisher.publish(
-      actions.map((a: A) => ({ ...a, ...(actionResult as ARM) }))
+      actions.map((a: A) => ({ ...a, ...(actionResult as ARM) })),
     );
   }
 }

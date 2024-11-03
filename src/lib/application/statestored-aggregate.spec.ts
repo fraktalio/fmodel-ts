@@ -127,7 +127,7 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
           return { evenNumber: s.evenNumber };
       }
     },
-    { evenNumber: 0 }
+    { evenNumber: 0 },
   );
 
 // Decider for Odd numbers only
@@ -164,7 +164,7 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
         return { oddNumber: s.oddNumber };
     }
   },
-  { oddNumber: 0 }
+  { oddNumber: 0 },
 );
 
 // ################################
@@ -271,7 +271,7 @@ class StateAndMetadataRepositoryImpl
   }
   async save(
     s: State,
-    cm: CmdMetadata
+    cm: CmdMetadata,
   ): Promise<State & Version & StateMetadata> {
     stateAndMetadataStorage = {
       evenNumber: s.evenNumber,
@@ -302,7 +302,7 @@ const stateAndMetadataRepository: IStateRepository<
 const aggregate: IStateStoredAggregate<Cmd, State, Evt, Version, Cmd, State> =
   new StateStoredAggregate<Cmd, State, Evt, Version, Cmd, State>(
     evenDecider.combine(oddDecider), // combining two deciders into one decider
-    stateRepository
+    stateRepository,
   );
 
 // This version of the aggregate has Command Metadata of type `CmdMetadata`  / the intersections `Cmd & CmdMetadata`
@@ -323,7 +323,7 @@ const aggregateWithMetadata: IStateStoredAggregate<
   StateMetadata
 >(
   evenDecider.combine(oddDecider), // combining two deciders into one decider
-  stateAndMetadataRepository
+  stateAndMetadataRepository,
 );
 
 const orchestratedAggregate: IStateStoredOrchestratingAggregate<
@@ -336,7 +336,7 @@ const orchestratedAggregate: IStateStoredOrchestratingAggregate<
 > = new StateStoredOrchestratingAggregate<Cmd, State, Evt, Version, Cmd, State>(
   evenDecider.combine(oddDecider), // combining two deciders into one decider
   stateRepository,
-  evenSaga.combine(oddSaga) // combining two sagas into one saga
+  evenSaga.combine(oddSaga), // combining two sagas into one saga
 );
 
 const orchestratedAggregateWithMetadata: IStateStoredOrchestratingAggregate<
@@ -356,7 +356,7 @@ const orchestratedAggregateWithMetadata: IStateStoredOrchestratingAggregate<
 >(
   evenDecider.combine(oddDecider), // combining two deciders into one decider
   stateAndMetadataRepository,
-  evenSaga.combine(oddSaga) // combining two sagas into one saga
+  evenSaga.combine(oddSaga), // combining two sagas into one saga
 );
 
 test('aggregate-with-metadata-handle', async (t) => {
@@ -371,7 +371,7 @@ test('aggregate-with-metadata-handle', async (t) => {
       evenNumber: 0,
       oddNumber: 1,
       traceId: '1',
-    }
+    },
   );
 });
 test('aggregate-handle', async (t) => {
@@ -384,7 +384,7 @@ test('aggregate-handle', async (t) => {
       version: 1,
       evenNumber: 0,
       oddNumber: 1,
-    }
+    },
   );
 });
 
@@ -398,7 +398,7 @@ test('orchestrated-aggregate-handle', async (t) => {
       version: 2,
       evenNumber: 2,
       oddNumber: 1,
-    }
+    },
   );
 });
 
@@ -414,6 +414,6 @@ test('orchestrated-aggregate-with-metadata-handle', async (t) => {
       evenNumber: 2,
       oddNumber: 1,
       traceId: 'trc1',
-    }
+    },
   );
 });

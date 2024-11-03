@@ -124,6 +124,6 @@ test('combined-saga-react', (t) => {
     evenSaga
       .combine(oddSaga)
       .react({ kind: 'OddNumberMultipliedEvt', value: 2 }),
-    [{ kindOfCommand: 'MultiplyEvenNumberCmd', valueOfCommand: 3 }]
+    [{ kindOfCommand: 'MultiplyEvenNumberCmd', valueOfCommand: 3 }],
   );
 });

@@ -57,7 +57,7 @@ export interface IEventRepository<C, E, V, CM, EM> {
   readonly save: (
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E) => Promise<V | null>,
   ) => Promise<readonly (E & V & EM)[]>;
 }
 
@@ -130,7 +130,7 @@ export abstract class EventComputation<C, S, E> implements IDecider<C, S, E> {
   protected computeNewEvents(events: readonly E[], command: C): readonly E[] {
     const currentState = events.reduce(
       this.decider.evolve,
-      this.decider.initialState
+      this.decider.initialState,
     );
     return this.decider.decide(command, currentState);
   }
@@ -145,7 +145,7 @@ export abstract class EventOrchestratingComputation<C, S, E>
 {
   protected constructor(
     protected readonly decider: IDecider<C, S, E>,
-    protected readonly saga: ISaga<E, C>
+    protected readonly saga: ISaga<E, C>,
   ) {
     this.initialState = decider.initialState;
   }
@@ -166,11 +166,11 @@ export abstract class EventOrchestratingComputation<C, S, E>
 
   private computeNewEventsInternally(
     events: readonly E[],
-    command: C
+    command: C,
   ): readonly E[] {
     const currentState = events.reduce(
       this.decider.evolve,
-      this.decider.initialState
+      this.decider.initialState,
     );
     return this.decider.decide(command, currentState);
   }
@@ -178,7 +178,7 @@ export abstract class EventOrchestratingComputation<C, S, E>
   protected async computeNewEvents(
     events: readonly E[],
     command: C,
-    fetch: (c: C) => Promise<readonly E[]>
+    fetch: (c: C) => Promise<readonly E[]>,
   ): Promise<readonly E[]> {
     // eslint-disable-next-line functional/no-let
     let resultingEvents = this.computeNewEventsInternally(events, command);
@@ -188,10 +188,10 @@ export abstract class EventOrchestratingComputation<C, S, E>
         const newEvents = this.computeNewEvents(
           (await fetch(cmd)).map((evt) => evt as E).concat(resultingEvents),
           cmd,
-          fetch
+          fetch,
         );
         resultingEvents = resultingEvents.concat(await newEvents);
-      }
+      },
     );
     return resultingEvents;
   }
@@ -219,7 +219,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    protected readonly eventRepository: IEventRepository<C, E, V, CM, EM>
+    protected readonly eventRepository: IEventRepository<C, E, V, CM, EM>,
   ) {
     super(decider);
   }
@@ -235,7 +235,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
   async save(
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E) => Promise<V | null>,
   ): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
@@ -246,7 +246,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.save(
       this.computeNewEvents(currentEvents, command),
       command,
-      async () => currentEvents[currentEvents.length - 1]
+      async () => currentEvents[currentEvents.length - 1],
     );
   }
 }
@@ -275,7 +275,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
   constructor(
     decider: IDecider<C, S, E>,
     protected readonly eventRepository: IEventRepository<C, E, V, CM, EM>,
-    saga: ISaga<E, C>
+    saga: ISaga<E, C>,
   ) {
     super(decider, saga);
   }
@@ -291,7 +291,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
   async save(
     events: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>
+    versionProvider: (e: E) => Promise<V | null>,
   ): Promise<readonly (E & V & EM)[]> {
     return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
@@ -302,17 +302,17 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
       await this.computeNewEvents(
         currentEvents,
         command,
-        async (cmd: C) => await this.eventRepository.fetch(cmd)
+        async (cmd: C) => await this.eventRepository.fetch(cmd),
       ),
       command,
-      this.versionProvider.bind(this)
+      this.versionProvider.bind(this),
     );
   }
 }
 
 async function asyncForEach(
   array: readonly any[],
-  callback: (arg0: any, arg1: number, arg2: any) => any
+  callback: (arg0: any, arg1: number, arg2: any) => any,
 ) {
   for (let index = 0; index < array.length; index++) {
     await callback(array[index], index, array);

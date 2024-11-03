@@ -49,7 +49,7 @@ export interface IStateRepository<C, S, V, CM, SM> {
   readonly save: (
     state: S,
     commandMetadata: CM,
-    version: V | null
+    version: V | null,
   ) => Promise<S & V & SM>;
 }
 
@@ -133,7 +133,7 @@ export abstract class StateOrchestratingComputation<C, S, E>
 {
   protected constructor(
     decider: IDecider<C, S, E>,
-    protected readonly saga: ISaga<E, C>
+    protected readonly saga: ISaga<E, C>,
   ) {
     super(decider);
   }
@@ -172,7 +172,7 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
 {
   constructor(
     decider: IDecider<C, S, E>,
-    protected readonly stateRepository: IStateRepository<C, S, V, CM, SM>
+    protected readonly stateRepository: IStateRepository<C, S, V, CM, SM>,
   ) {
     super(decider);
   }
@@ -183,7 +183,7 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
   async save(
     state: S,
     commandMetadata: CM,
-    version: V | null
+    version: V | null,
   ): Promise<S & V & SM> {
     return this.stateRepository.save(state, commandMetadata, version);
   }
@@ -192,12 +192,12 @@ export class StateStoredAggregate<C, S, E, V, CM, SM>
     const currentState = await this.stateRepository.fetch(command);
     const newState = this.computeNewState(
       currentState ? currentState : this.decider.initialState,
-      command
+      command,
     );
     return this.stateRepository.save(
       newState,
       command as CM,
-      currentState as V
+      currentState as V,
     );
   }
 }
@@ -225,7 +225,7 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
   constructor(
     decider: IDecider<C, S, E>,
     protected readonly stateRepository: IStateRepository<C, S, V, CM, SM>,
-    saga: ISaga<E, C>
+    saga: ISaga<E, C>,
   ) {
     super(decider, saga);
   }
@@ -237,7 +237,7 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
   async save(
     state: S,
     commandMetadata: CM,
-    version: V | null
+    version: V | null,
   ): Promise<S & V & SM> {
     return this.stateRepository.save(state, commandMetadata, version);
   }
@@ -246,12 +246,12 @@ export class StateStoredOrchestratingAggregate<C, S, E, V, CM, SM>
     const currentState = await this.stateRepository.fetch(command);
     const newState = this.computeNewState(
       currentState ? currentState : this.decider.initialState,
-      command
+      command,
     );
     return this.stateRepository.save(
       newState,
       command as CM,
-      currentState as V
+      currentState as V,
     );
   }
 }
