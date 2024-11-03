@@ -47,12 +47,12 @@
   },
   "devDependencies": {
     "marked": ">=4.0.10",
-    "@ava/typescript": "^1.1.1",
+    "@ava/typescript": "^5.0.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
     "@types/node": "^22.1.0",
     "@typescript-eslint/eslint-plugin": "^5.57.1",
     "@typescript-eslint/parser": "^5.57.1",
-    "ava": "^5.0.1",
+    "ava": "^6.2.0",
     "codecov": "^3.5.0",
     "cspell": "^8.0.0",
     "cz-conventional-changelog": "^3.0.1",
@@ -88,7 +88,8 @@
     "typescript": {
       "rewritePaths": {
         "src/": "build/main/"
-      }
+      },
+      "compile": false
     },
     "files": [
       "!build/module/**"
