@@ -18,3 +18,11 @@ export * from './lib/application/eventsourcing-aggregate';
 export * from './lib/application/statestored-aggregate';
 export * from './lib/application/materialized-view';
 export * from './lib/application/saga-manager';
+
+/**
+ * Identifier type - a simple type that represents an identifier.
+ * For example, it can be used to identify the decider/aggregate/entity that the command is targeting or the event that is being processed.
+ */
+export type Identifier = {
+  readonly id: string; // The ID of the decider/aggregate/entity that the command is targeting
+};

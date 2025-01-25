@@ -31,21 +31,25 @@ import {
 // ################################
 
 type AddOddNumberCmd = {
+  readonly id: string;
   readonly kindOfCommand: 'AddOddNumberCmd';
   readonly valueOfCommand: number;
 };
 
 type MultiplyOddNumberCmd = {
+  readonly id: string;
   readonly kindOfCommand: 'MultiplyOddNumberCmd';
   readonly valueOfCommand: number;
 };
 
 type AddEvenNumberCmd = {
+  readonly id: string;
   readonly kindOfCommand: 'AddEvenNumberCmd';
   readonly valueOfCommand: number;
 };
 
 type MultiplyEvenNumberCmd = {
+  readonly id: string;
   readonly kindOfCommand: 'MultiplyEvenNumberCmd';
   readonly valueOfCommand: number;
 };
@@ -60,21 +64,25 @@ type EvenNumberCmd = AddEvenNumberCmd | MultiplyEvenNumberCmd;
 // ################################
 
 type OddNumberAddedEvt = {
+  readonly id: string;
   readonly value: number;
   readonly kind: 'OddNumberAddedEvt';
 };
 
 type OddNumberMultipliedEvt = {
+  readonly id: string;
   readonly value: number;
   readonly kind: 'OddNumberMultipliedEvt';
 };
 
 type EvenNumberAddedEvt = {
+  readonly id: string;
   readonly value: number;
   readonly kind: 'EvenNumberAddedEvt';
 };
 
 type EvenNumberMultipliedEvt = {
+  readonly id: string;
   readonly value: number;
   readonly kind: 'EvenNumberMultipliedEvt';
 };
@@ -107,9 +115,13 @@ const oddDecider: Decider<OddNumberCmd, OddState, OddNumberEvt> = new Decider<
   (c, _) => {
     switch (c.kindOfCommand) {
       case 'AddOddNumberCmd':
-        return [{ kind: 'OddNumberAddedEvt', value: c.valueOfCommand }];
+        return [
+          { kind: 'OddNumberAddedEvt', id: '0', value: c.valueOfCommand },
+        ];
       case 'MultiplyOddNumberCmd':
-        return [{ kind: 'OddNumberMultipliedEvt', value: c.valueOfCommand }];
+        return [
+          { kind: 'OddNumberMultipliedEvt', id: '', value: c.valueOfCommand },
+        ];
       default:
         // Exhaustive matching of the command type
         // eslint-disable-next-line no-case-declarations
@@ -141,9 +153,17 @@ const evenDecider: Decider<EvenNumberCmd, EvenState, EvenNumberEvt> =
     (c, _) => {
       switch (c.kindOfCommand) {
         case 'AddEvenNumberCmd':
-          return [{ kind: 'EvenNumberAddedEvt', value: c.valueOfCommand }];
+          return [
+            { kind: 'EvenNumberAddedEvt', id: '0', value: c.valueOfCommand },
+          ];
         case 'MultiplyEvenNumberCmd':
-          return [{ kind: 'EvenNumberMultipliedEvt', value: c.valueOfCommand }];
+          return [
+            {
+              kind: 'EvenNumberMultipliedEvt',
+              id: '0',
+              value: c.valueOfCommand,
+            },
+          ];
         default:
           // Exhaustive matching of the command type
           // eslint-disable-next-line no-case-declarations
@@ -183,6 +203,7 @@ const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
       return [
         {
           kindOfCommand: 'AddEvenNumberCmd',
+          id: '0',
           valueOfCommand: ar.value + 1,
         },
       ];
@@ -190,6 +211,7 @@ const oddSaga: Saga<OddNumberEvt, EvenNumberCmd> = new Saga<
       return [
         {
           kindOfCommand: 'MultiplyEvenNumberCmd',
+          id: '0',
           valueOfCommand: ar.value + 1,
         },
       ];
@@ -249,6 +271,7 @@ class EventRepositoryImpl
         eList.map(async (e: Evt, index) => ({
           kind: e.kind,
           value: e.value,
+          id: e.id,
           version: ((await versionProvider(e))?.version ?? 0) + index + 1,
           traceId: commandMetadata.traceId,
         })),
@@ -360,10 +383,19 @@ test('aggregate-handle', async (t) => {
   t.deepEqual(
     await aggregate.handle({
       kindOfCommand: 'AddOddNumberCmd',
+      id: '0',
       valueOfCommand: 1,
       traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }],
+    [
+      {
+        id: '0',
+        value: 1,
+        version: 1,
+        kind: 'OddNumberAddedEvt',
+        traceId: 'trc1',
+      },
+    ],
   );
 });
 
@@ -371,10 +403,19 @@ test('aggregate-handle2', async (t) => {
   t.deepEqual(
     await aggregate.handle({
       kindOfCommand: 'AddEvenNumberCmd',
+      id: '0',
       valueOfCommand: 2,
       traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }],
+    [
+      {
+        id: '0',
+        value: 2,
+        version: 1,
+        kind: 'EvenNumberAddedEvt',
+        traceId: 'trc1',
+      },
+    ],
   );
 });
 
@@ -382,10 +423,19 @@ test('aggregate-via-tuples-handle', async (t) => {
   t.deepEqual(
     await aggregateViaTuple.handle({
       kindOfCommand: 'AddOddNumberCmd',
+      id: '0',
       valueOfCommand: 1,
       traceId: 'trc1',
     }),
-    [{ value: 1, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' }],
+    [
+      {
+        id: '0',
+        value: 1,
+        version: 1,
+        kind: 'OddNumberAddedEvt',
+        traceId: 'trc1',
+      },
+    ],
   );
 });
 
@@ -393,10 +443,19 @@ test('aggregate-via-tuples-handle2', async (t) => {
   t.deepEqual(
     await aggregateViaTuple.handle({
       kindOfCommand: 'AddEvenNumberCmd',
+      id: '0',
       valueOfCommand: 2,
       traceId: 'trc1',
     }),
-    [{ value: 2, version: 1, kind: 'EvenNumberAddedEvt', traceId: 'trc1' }],
+    [
+      {
+        id: '0',
+        value: 2,
+        version: 1,
+        kind: 'EvenNumberAddedEvt',
+        traceId: 'trc1',
+      },
+    ],
   );
 });
 
@@ -404,12 +463,25 @@ test('aggregate-orchestrating-handle', async (t) => {
   t.deepEqual(
     await aggregateOrchestrating.handle({
       kindOfCommand: 'AddOddNumberCmd',
+      id: '0',
       valueOfCommand: 3,
       traceId: 'trc1',
     }),
     [
-      { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
-      { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
+      {
+        id: '0',
+        value: 3,
+        version: 1,
+        kind: 'OddNumberAddedEvt',
+        traceId: 'trc1',
+      },
+      {
+        id: '0',
+        value: 4,
+        version: 2,
+        kind: 'EvenNumberAddedEvt',
+        traceId: 'trc1',
+      },
     ],
   );
 });
@@ -418,12 +490,25 @@ test('aggregate-via-tuples-orchestrating-handle', async (t) => {
   t.deepEqual(
     await aggregateViaTupleOrchestrating.handle({
       kindOfCommand: 'AddOddNumberCmd',
+      id: '0',
       valueOfCommand: 3,
       traceId: 'trc1',
     }),
     [
-      { value: 3, version: 1, kind: 'OddNumberAddedEvt', traceId: 'trc1' },
-      { value: 4, version: 2, kind: 'EvenNumberAddedEvt', traceId: 'trc1' },
+      {
+        id: '0',
+        value: 3,
+        version: 1,
+        kind: 'OddNumberAddedEvt',
+        traceId: 'trc1',
+      },
+      {
+        id: '0',
+        value: 4,
+        version: 2,
+        kind: 'EvenNumberAddedEvt',
+        traceId: 'trc1',
+      },
     ],
   );
 });
