@@ -13,6 +13,7 @@
 
 /* eslint-disable functional/no-classes,@typescript-eslint/no-explicit-any,functional/no-loop-statements */
 
+import { Identifier } from '../..';
 import { IDecider } from '../domain/decider';
 import { ISaga } from '../domain/saga';
 
@@ -105,8 +106,14 @@ export interface IEventSourcingAggregate<C, S, E, V, CM, EM>
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export interface IEventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
-  extends IEventSourcingAggregate<C, S, E, V, CM, EM>,
+export interface IEventSourcingOrchestratingAggregate<
+  C extends Identifier,
+  S,
+  E extends Identifier,
+  V,
+  CM,
+  EM,
+> extends IEventSourcingAggregate<C, S, E, V, CM, EM>,
     ISaga<E, C> {}
 
 /**
@@ -140,7 +147,11 @@ export abstract class EventComputation<C, S, E> implements IDecider<C, S, E> {
  * An abstract algorithm to compute new events based on the old events and the command being handled.
  * It returns all the events, including the events created by handling commands which are triggered by Saga - orchestration included.
  */
-export abstract class EventOrchestratingComputation<C, S, E>
+export abstract class EventOrchestratingComputation<
+    C extends Identifier,
+    S,
+    E extends Identifier,
+  >
   implements IDecider<C, S, E>, ISaga<E, C>
 {
   protected constructor(
@@ -186,7 +197,9 @@ export abstract class EventOrchestratingComputation<C, S, E>
       resultingEvents.flatMap((evt) => this.saga.react(evt)),
       async (cmd: C) => {
         const newEvents = this.computeNewEvents(
-          (await fetch(cmd)).map((evt) => evt as E).concat(resultingEvents),
+          (await fetch(cmd))
+            .map((evt) => evt as E)
+            .concat(resultingEvents.filter((evt) => evt.id === cmd.id)),
           cmd,
           fetch,
         );
@@ -268,7 +281,14 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
  *
  * @author Иван Дугалић / Ivan Dugalic / @idugalic
  */
-export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
+export class EventSourcingOrchestratingAggregate<
+    C extends Identifier,
+    S,
+    E extends Identifier,
+    V,
+    CM,
+    EM,
+  >
   extends EventOrchestratingComputation<C, S, E>
   implements IEventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
 {
@@ -296,7 +316,7 @@ export class EventSourcingOrchestratingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.save(events, commandMetadata, versionProvider);
   }
 
-  async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
+  async handle(command: Readonly<C & CM>): Promise<readonly (E & V & EM)[]> {
     const currentEvents = await this.eventRepository.fetch(command);
     return this.eventRepository.save(
       await this.computeNewEvents(
