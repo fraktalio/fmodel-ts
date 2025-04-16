@@ -59,7 +59,7 @@
     "eslint": "^8.37.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-eslint-comments": "^3.2.0",
-    "eslint-plugin-functional": "^6.0.0",
+    "eslint-plugin-functional": "^9.0.1",
     "eslint-plugin-import": "^2.31.0",
     "gh-pages": "^6.0.0",
     "npm-run-all": "^4.1.5",
