@@ -54,7 +54,7 @@
     "@typescript-eslint/parser": "^8.12.2",
     "ava": "^6.2.0",
     "codecov": "^3.5.0",
-    "cspell": "^8.0.0",
+    "cspell": "^9.0.1",
     "cz-conventional-changelog": "^3.0.1",
     "eslint": "^8.37.0",
     "eslint-config-prettier": "^10.0.1",
