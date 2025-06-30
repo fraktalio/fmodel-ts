@@ -49,7 +49,7 @@
     "marked": ">=4.0.10",
     "@ava/typescript": "^5.0.0",
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
-    "@types/node": "^22.1.0",
+    "@types/node": "^24.0.7",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
     "ava": "^6.2.0",
