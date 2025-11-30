@@ -39,26 +39,17 @@ export interface IEventRepository<C, E, V, CM, EM> {
   readonly fetch: (command: C) => Promise<readonly (E & V & EM)[]>;
 
   /**
-   * Get the event stream version / sequence
-   *
-   * @param event - Event of type `E`
-   *
-   * @return the version / sequence of the event stream that this event belongs to.
-   */
-  readonly versionProvider: (event: E) => Promise<V | null>;
-
-  /**
    * Save events
    *
    * @param events - list of Events
    * @param commandMetadata - Command Metadata of the command that initiated `events`
-   * @param versionProvider - A provider for the Latest Event in this stream and its Version/Sequence
+   * @param historyEvents - History Events that are already stored - used for versioning
    * @return  a list of newly saved Event(s) of type `E` with Version of type `V` and with Event Metadata of type `EM`
    */
   readonly save: (
-    events: readonly E[],
+    newEvents: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>,
+    historyEvents: readonly (E & V & EM)[],
   ) => Promise<readonly (E & V & EM)[]>;
 }
 
@@ -241,16 +232,12 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.fetch(command);
   }
 
-  async versionProvider(event: E): Promise<V | null> {
-    return this.eventRepository.versionProvider(event);
-  }
-
   async save(
-    events: readonly E[],
+    newEvents: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>,
+    historyEvents: readonly (E & V & EM)[],
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(events, commandMetadata, versionProvider);
+    return this.eventRepository.save(newEvents, commandMetadata, historyEvents);
   }
 
   async handle(command: C & CM): Promise<readonly (E & V & EM)[]> {
@@ -259,7 +246,7 @@ export class EventSourcingAggregate<C, S, E, V, CM, EM>
     return this.eventRepository.save(
       this.computeNewEvents(currentEvents, command),
       command,
-      async () => currentEvents[currentEvents.length - 1],
+      currentEvents,
     );
   }
 }
@@ -304,16 +291,12 @@ export class EventSourcingOrchestratingAggregate<
     return this.eventRepository.fetch(command);
   }
 
-  async versionProvider(event: E): Promise<V | null> {
-    return this.eventRepository.versionProvider(event);
-  }
-
   async save(
-    events: readonly E[],
+    newEvents: readonly E[],
     commandMetadata: CM,
-    versionProvider: (e: E) => Promise<V | null>,
+    historyEvents: readonly (E & V & EM)[],
   ): Promise<readonly (E & V & EM)[]> {
-    return this.eventRepository.save(events, commandMetadata, versionProvider);
+    return this.eventRepository.save(newEvents, commandMetadata, historyEvents);
   }
 
   async handle(command: Readonly<C & CM>): Promise<readonly (E & V & EM)[]> {
@@ -325,7 +308,7 @@ export class EventSourcingOrchestratingAggregate<
         async (cmd: C) => await this.eventRepository.fetch(cmd),
       ),
       command,
-      this.versionProvider.bind(this),
+      currentEvents,
     );
   }
 }
