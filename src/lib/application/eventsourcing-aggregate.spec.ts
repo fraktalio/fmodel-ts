@@ -263,7 +263,7 @@ class EventRepositoryImpl
   async save(
     eList: readonly Evt[],
     commandMetadata: CmdMetadata,
-    versionProvider: (e: Evt) => Promise<Version | null>,
+    historyEvents: readonly (Evt & Version & EvtMetadata)[],
   ): Promise<readonly (Evt & Version & EvtMetadata)[]> {
     //mapping the Commands metadata into Events metadata !!!
     const savedEvents: readonly (Evt & Version & EvtMetadata)[] =
@@ -272,16 +272,13 @@ class EventRepositoryImpl
           kind: e.kind,
           value: e.value,
           id: e.id,
-          version: ((await versionProvider(e))?.version ?? 0) + index + 1,
+          version:
+            (historyEvents[historyEvents.length - 1]?.version ?? 0) + index + 1,
           traceId: commandMetadata.traceId,
         })),
       );
     storage.concat(savedEvents);
     return savedEvents;
-  }
-
-  async versionProvider(_e: Evt): Promise<Version | null> {
-    return storage[storage.length - 1];
   }
 }
 
