@@ -177,27 +177,71 @@ export abstract class EventOrchestratingComputation<
     return this.decider.decide(command, currentState);
   }
 
-  protected async computeNewEvents(
-    events: readonly E[],
+  protected async computeNewEvents<V, EM>(
+    events: readonly (E & V & EM)[],
     command: C,
-    fetch: (c: C) => Promise<readonly E[]>,
-  ): Promise<readonly E[]> {
+    fetch: (c: C) => Promise<readonly (E & V & EM)[]>,
+  ): Promise<{
+    newEvents: readonly E[];
+    allFetchedEvents: readonly (E & V & EM)[];
+  }> {
     // eslint-disable-next-line functional/no-let
-    let resultingEvents = this.computeNewEventsInternally(events, command);
+    let resultingEvents = this.computeNewEventsInternally(
+      events as readonly E[],
+      command,
+    );
+    // eslint-disable-next-line functional/no-let
+    let allFetchedEvents = [...events];
+
     await asyncForEach(
       resultingEvents.flatMap((evt) => this.saga.react(evt)),
       async (cmd: C) => {
-        const newEvents = this.computeNewEvents(
-          (await fetch(cmd))
-            .map((evt) => evt as E)
-            .concat(resultingEvents.filter((evt) => evt.id === cmd.id)),
+        const fetchedEvents = await fetch(cmd);
+
+        // Add newly fetched events to our complete history (avoiding duplicates by ID if possible)
+        const newFetchedEvents = fetchedEvents.filter(
+          (fetchedEvt) =>
+            !allFetchedEvents.some(
+              (existingEvt) =>
+                existingEvt.id === fetchedEvt.id &&
+                JSON.stringify(existingEvt) === JSON.stringify(fetchedEvt),
+            ),
+        );
+        allFetchedEvents = allFetchedEvents.concat(newFetchedEvents);
+
+        const filteredResultingEvents = resultingEvents.filter(
+          (evt) => evt.id === cmd.id,
+        );
+        const combinedEvents = fetchedEvents.concat(
+          filteredResultingEvents as unknown as readonly (E & V & EM)[],
+        );
+
+        const orchestrationResult = await this.computeNewEvents(
+          combinedEvents,
           cmd,
           fetch,
         );
-        resultingEvents = resultingEvents.concat(await newEvents);
+
+        resultingEvents = resultingEvents.concat(orchestrationResult.newEvents);
+
+        // Add any new fetched events from recursive calls
+        const newRecursiveFetchedEvents =
+          orchestrationResult.allFetchedEvents.filter(
+            (fetchedEvt) =>
+              !allFetchedEvents.some(
+                (existingEvt) =>
+                  existingEvt.id === fetchedEvt.id &&
+                  JSON.stringify(existingEvt) === JSON.stringify(fetchedEvt),
+              ),
+          ) as unknown as readonly (E & V & EM)[];
+        allFetchedEvents = allFetchedEvents.concat(newRecursiveFetchedEvents);
       },
     );
-    return resultingEvents;
+
+    return {
+      newEvents: resultingEvents,
+      allFetchedEvents,
+    };
   }
 }
 
@@ -301,14 +345,16 @@ export class EventSourcingOrchestratingAggregate<
 
   async handle(command: Readonly<C & CM>): Promise<readonly (E & V & EM)[]> {
     const currentEvents = await this.eventRepository.fetch(command);
-    return this.eventRepository.save(
-      await this.computeNewEvents(
-        currentEvents,
-        command,
-        async (cmd: C) => await this.eventRepository.fetch(cmd),
-      ),
-      command,
+    const orchestrationResult = await this.computeNewEvents<V, EM>(
       currentEvents,
+      command,
+      async (cmd: C) => await this.eventRepository.fetch(cmd),
+    );
+
+    return this.eventRepository.save(
+      orchestrationResult.newEvents,
+      command,
+      orchestrationResult.allFetchedEvents,
     );
   }
 }
