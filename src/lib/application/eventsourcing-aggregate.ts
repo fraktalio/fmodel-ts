@@ -198,16 +198,8 @@ export abstract class EventOrchestratingComputation<
       async (cmd: C) => {
         const fetchedEvents = await fetch(cmd);
 
-        // Add newly fetched events to our complete history (avoiding duplicates by ID if possible)
-        const newFetchedEvents = fetchedEvents.filter(
-          (fetchedEvt) =>
-            !allFetchedEvents.some(
-              (existingEvt) =>
-                existingEvt.id === fetchedEvt.id &&
-                JSON.stringify(existingEvt) === JSON.stringify(fetchedEvt),
-            ),
-        );
-        allFetchedEvents = allFetchedEvents.concat(newFetchedEvents);
+        // Add newly fetched events to our complete history
+        allFetchedEvents = allFetchedEvents.concat(fetchedEvents);
 
         const filteredResultingEvents = resultingEvents.filter(
           (evt) => evt.id === cmd.id,
@@ -225,16 +217,9 @@ export abstract class EventOrchestratingComputation<
         resultingEvents = resultingEvents.concat(orchestrationResult.newEvents);
 
         // Add any new fetched events from recursive calls
-        const newRecursiveFetchedEvents =
-          orchestrationResult.allFetchedEvents.filter(
-            (fetchedEvt) =>
-              !allFetchedEvents.some(
-                (existingEvt) =>
-                  existingEvt.id === fetchedEvt.id &&
-                  JSON.stringify(existingEvt) === JSON.stringify(fetchedEvt),
-              ),
-          ) as unknown as readonly (E & V & EM)[];
-        allFetchedEvents = allFetchedEvents.concat(newRecursiveFetchedEvents);
+        allFetchedEvents = allFetchedEvents.concat(
+          orchestrationResult.allFetchedEvents as readonly (E & V & EM)[],
+        );
       },
     );
 
